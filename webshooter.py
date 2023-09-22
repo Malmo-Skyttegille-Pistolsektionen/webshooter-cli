@@ -7,6 +7,7 @@ import argparse
 import re
 import configparser
 import os
+import sys
 import math
 import unicodedata
 
@@ -37,14 +38,32 @@ parser.add_argument('-d', '--debug', help = "Debug", required = False, action='s
 
 args = parser.parse_args().__dict__
 
-config = configparser.ConfigParser()
-config.read_file(open(f"{os.path.expanduser('~')}/.webshooter.rc"))
+configfile = f"{os.path.expanduser('~')}/.webshooter.rc"
+if os.path.exists(configfile):
+  config = configparser.ConfigParser()
+  config.read_file(open(configfile))
 
-if args['club'] is None:
-  args['club'] = config.get('global', 'club')
+  if args['club'] is None:
+    args['club'] = config.get('global', 'club')
 
-if args['token'] is None:
-  args['token'] = config.get('global', 'token')
+  if args['token'] is None:
+    args['token'] = config.get('global', 'token')
+
+elif args['token'] is None:
+  parser.print_help(sys.stderr)
+  print("", file=sys.stderr)
+  print(f"Token not specified and config file {configfile} not found", file=sys.stderr)
+  print("Use --token or create config file", file=sys.stderr)
+  print("", file=sys.stderr)
+  print("Example config file (all options are optional):", file=sys.stderr)
+  print("", file=sys.stderr)
+  print("[global]", file=sys.stderr)
+  print("token = <token>", file=sys.stderr)
+  print("club = xx-yyy", file=sys.stderr)
+  print("unicode = [True|False]", file=sys.stderr)
+  print("", file=sys.stderr)
+
+  exit(1)
 
 def fetch_data(competition, page):
   if args['debug']:
