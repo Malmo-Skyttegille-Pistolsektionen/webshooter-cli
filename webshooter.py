@@ -49,9 +49,9 @@ if args['token'] is None:
 def fetch_data(competition, page):
   if args['debug']:
     if page is None:
-      filename = f"testdata/webshooter_{args['competition']}.json"
+      filename = f"testdata/webshooter_{competition}.json"
     else:
-      filename = f"testdata/webshooter_{page.split('?')[0]}.json"
+      filename = f"testdata/webshooter_{competition}_{page.split('?')[0]}.json"
     with open(filename) as f:
       print(f"Reading file {filename}")
       output = f.read()
@@ -76,6 +76,8 @@ def get_info(competition):
   info['name'] = data['competitions']['name']
   info['city'] = data['competitions']['contact_city']
   info['venue'] = data['competitions']['contact_venue']
+  info['date'] = data['competitions']['date']
+  info['signups_close'] = data['competitions']['signups_closing_date']
 
   return info
 
@@ -280,7 +282,10 @@ if config.has_option('global', 'unicode') and not config.getboolean('global', 'u
   i = unicodedata.normalize('NFKD', i)
   i = u"".join([c for c in i if not unicodedata.combining(c)])
 print(f"{i}")
+print(f"Date {info['date']}")
+print("")
 print(f"Webshooter id {info['id']}")
+print(f"Signup closing date {info['signups_close']}")
 
 print("")
 print(f"Club: {args['club']}")
