@@ -8,6 +8,7 @@ import re
 import configparser
 import os
 import math
+import unicodedata
 
 MODES = "starttimes, results, signups"
 
@@ -91,9 +92,9 @@ def get_signups():
       if not card in result.keys():
         result[card] = {'name': name, 'lines': []}
       if same_patrol_as is None:
-        result[card]['lines'].append(f"{name:<20} - {classname:<4}")
+        result[card]['lines'].append(f"{classname:<4}")
       else:
-        result[card]['lines'].append(f"{name:<20} - {classname:<4} - {same_patrol_as}")
+        result[card]['lines'].append(f"{classname:<4} - {same_patrol_as}")
 
   result[0] = {'name': args['club'], 'lines': []}
   result[0]['lines'].append("")
@@ -125,7 +126,7 @@ def get_starttimes():
         lane = signup['lane']
         if not card in result.keys():
           result[card] = {'name': name, 'lines': []}
-        result[card]['lines'].append(f"{name:<20} - {classname:<4} : Patrol {patrolnr:<2} ({start_time} - {end_time}) : Lane {lane}")
+        result[card]['lines'].append(f"{classname:<4} : Patrol {patrolnr:<2} ({start_time} - {end_time}) : Lane {lane}")
 
   return result
 
@@ -205,7 +206,7 @@ def get_results():
         else:
           points = f"{results['hits']}/{results['figure_hits']}"
         if not first_pass:
-          line = f"{firstname:<10} {lastname:<20} - {classname:<4} : {placement:>2} - {points:<5}"
+          line = f"{classname:<4} : {placement:>2} - {points:<5}"
           if args['verbose']:
             if results['std_medal'] is not None:
               line += f"({results['std_medal']}) "
@@ -259,7 +260,11 @@ for card in result.keys():
     if args['card'] is None or args['card'] == card:
       if args['name'] is None or args['name'] == result[card]['name']:
         for line in result[card]['lines']:
-          print(f"{line}")
+          name = result[card]['name']
+          if config.has_option('global', 'unicode') and not config.getboolean('global', 'unicode'):
+            name = unicodedata.normalize('NFKD', name)
+            name = u"".join([c for c in name if not unicodedata.combining(c)])
+          print(f"{name:<20} - {line}")
 
 if 0 in result.keys():
   for line in result[card]['lines']:
