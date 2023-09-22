@@ -12,7 +12,8 @@ import unicodedata
 
 MODES = "starttimes, results, signups"
 
-CURL_URL = "'https://webshooter.se/api/v4.1.9/competitions/{competition}/{page}'"
+CURL_URL_BASE = "https://webshooter.se/api/v4.1.9/competitions/{competition}"
+CURL_URL_PAGE = "https://webshooter.se/api/v4.1.9/competitions/{competition}/{page}"
 CURL_OPTIONS = ("-H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0' " +
                 "-H 'Accept: application/json, text/plain, */*' -H 'Accept-Language: en-US,en;q=0.5' " +
                 "-H 'Accept-Encoding: gzip, deflate, br' " +
@@ -45,24 +46,43 @@ if args['club'] is None:
 if args['token'] is None:
   args['token'] = config.get('global', 'token')
 
-def fetch_data(page):
+def fetch_data(competition, page):
   if args['debug']:
-    filename = f"testdata/webshooter_{page.split('?')[0]}.json"
+    if page is None:
+      filename = f"testdata/webshooter_{args['competition']}.json"
+    else:
+      filename = f"testdata/webshooter_{page.split('?')[0]}.json"
     with open(filename) as f:
       print(f"Reading file {filename}")
       output = f.read()
   else:
-    print(f"Fetching {page.split('?')[0]}")
-    curl = f"curl {CURL_URL} {CURL_OPTIONS}"
-    output = subprocess.run(curl.format(**args, page=page), shell = True, capture_output = True)
+    if page is None:
+      print(f"Fetching {args['competition']}")
+      curl = f"curl '{CURL_URL_BASE}' {CURL_OPTIONS}"
+    else:
+      print(f"Fetching {page.split('?')[0]}")
+      curl = f"curl '{CURL_URL_PAGE}' {CURL_OPTIONS}"
+    output = subprocess.run(curl.format(competition = competition, page = page, token = args['token']), shell = True, capture_output = True)
     output = output.stdout.decode()
 
   return json.loads(output)
 
-def get_signups():
+def get_info(competition):
+  info = {}
+
+  data = fetch_data(competition = competition, page = None)
+
+  info['id'] = competition
+  info['name'] = data['competitions']['name']
+  info['city'] = data['competitions']['contact_city']
+  info['venue'] = data['competitions']['contact_venue']
+
+  return info
+
+def get_signups(competition):
   result = {}
 
-  data = fetch_data(page="signups?page=1&per_page=1000")
+  data = fetch_data(competition = competition, page = "signups?page=1&per_page=1000")
 
   weaponclasses = {}
   signup_count = 0
@@ -106,10 +126,10 @@ def get_signups():
 
   return result
 
-def get_starttimes():
+def get_starttimes(competition):
   result = {}
 
-  data = fetch_data(page="patrols")
+  data = fetch_data(competition = competition, page = "patrols")
 
   for patrol in data['patrols']:
     start_time = patrol['start_time_human']
@@ -130,10 +150,10 @@ def get_starttimes():
 
   return result
 
-def get_results():
+def get_results(competition):
   result = {}
 
-  data = fetch_data(page="results")
+  data = fetch_data(competition = competition, page = "results")
 
   total_points = {}
   std_medals = {}
@@ -240,16 +260,27 @@ def get_results():
 
   return result
 
+info = get_info(competition = args['competition'])
+
 if args['mode'] == "signups":
-  result = get_signups()
+  result = get_signups(competition = args['competition'])
 elif args['mode'] == "starttimes":
-  result = get_starttimes()
+  result = get_starttimes(competition = args['competition'])
 elif args['mode'] == "results":
-  result = get_results()
+  result = get_results(competition = args['competition'])
 else:
   print("Invalid mode")
   print(f"Available modes: {MODES}")
   exit(1)
+
+print("")
+
+i = f"{info['name']} - {info['city']} - {info['venue']}"
+if config.has_option('global', 'unicode') and not config.getboolean('global', 'unicode'):
+  i = unicodedata.normalize('NFKD', i)
+  i = u"".join([c for c in i if not unicodedata.combining(c)])
+print(f"{i}")
+print(f"Webshooter id {info['id']}")
 
 print("")
 print(f"Club: {args['club']}")
