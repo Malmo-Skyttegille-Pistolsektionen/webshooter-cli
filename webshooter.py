@@ -7,6 +7,7 @@ import argparse
 import re
 import configparser
 import os
+import math
 
 MODES = "starttimes, results, signups"
 
@@ -29,6 +30,7 @@ parser.add_argument('--name', help = "Name")
 parser.add_argument('--club', help = "Club")
 parser.add_argument('--card', help = "Card")
 parser.add_argument('--mode', help = f"Mode, available modes: {MODES}", required = True)
+parser.add_argument('-v', '--verbose', help = "Verbose", required = False, action='store_true', default=False)
 parser.add_argument('-d', '--debug', help = "Debug", required = False, action='store_true', default=False)
 
 args = parser.parse_args().__dict__
@@ -132,41 +134,108 @@ def get_results():
 
   data = fetch_data(page="results")
 
-  for results in data['results']:
-    firstname = results['signup']['user']['name']
-    lastname = results['signup']['user']['lastname']
-    card = results['signup']['user']['shooting_card_number']
-    name = f"{firstname} {lastname}"
-    club = str(results['signup']['club']['districts_id']) + '-' + str(results['signup']['club']['clubs_nr'])
-    if args['club'] == club:
+  total_points = {}
+  std_medals = {}
+  total_series = 0
+
+  for first_pass in [ True, False ]:
+    if not first_pass:
+      if args['verbose']:
+        print("Poängmetoden Precision:")
+      for key in total_points:
+        if key == 'A':
+          s = 46.1 * total_series
+          b = 44.5 * total_series
+        elif key == 'B':
+          s = 47.0 * total_series
+          b = 45.5 * total_series
+        elif key == 'C':
+          s = 47.1 * total_series
+          b = 46.0 * total_series
+        s = math.ceil(s)
+        b = math.ceil(b)
+        if args['verbose']:
+          print(f"{key} S: {s} B: {b}")
+
+        std_medals[key] = {}
+        std_medals[key]['s'] = s
+        std_medals[key]['b'] = b
+
+      if args['verbose']:
+        print("Beräkningsmetoden:")
+      for key in total_points:
+        total_points[key].sort(reverse=True)
+        count = len(total_points[key])
+        s = math.floor(count/9)
+        s = total_points[key][s-1]
+        b = math.floor(count/3)
+        b = total_points[key][b-1]
+        if args['verbose']:
+          print(f"{key}({count}) S: {s} B: {b}")
+
+        std_medals[key]['s'] = min(std_medals[key]['s'], s)
+        std_medals[key]['b'] = min(std_medals[key]['b'], b)
+
+      if args['verbose']:
+        print("Använda gränser:")
+        for key in std_medals:
+          print(f"{key} S: {std_medals[key]['s']} B: {std_medals[key]['b']}")
+
+    for results in data['results']:
+      series = 0
+      firstname = results['signup']['user']['name']
+      lastname = results['signup']['user']['lastname']
+      card = results['signup']['user']['shooting_card_number']
+      name = f"{firstname} {lastname}"
+      club = str(results['signup']['club']['districts_id']) + '-' + str(results['signup']['club']['clubs_nr'])
       classname = results['weaponclass']['classname']
       placement = results['placement']
-      if results['figure_hits'] == 0 and results['points'] != 0:
-        precision = True
-      else:
-        precision = False
-      if precision:
-        points = results['points']
-      else:
-        points = f"{results['hits']}/{results['figure_hits']}"
-      line = f"{firstname:<10} {lastname:<20} - {classname:<4} : {placement:>2} - {points:<5}"
-      if results['std_medal'] is not None:
-        line += f"({results['std_medal']})"
-      else:
-        line += "   "
-      line += " -"
-      first = True
-      for point in results['results']:
-        if not first:
-          line += ","
-          first = False
-        if precision:
-          line += f" {point['points']}"
+      if results['placement'] > 0:
+        group = results['weaponclass']['classname_general'][0]
+        if total_points.get(group) is None:
+          total_points[group] = []
+        total_points[group].append(results['points'])
+      if args['club'] == club:
+        if results['figure_hits'] == 0 and results['points'] != 0:
+          precision = True
         else:
-          line += f" {point['hits']}/{point['figure_hits']}"
-      if not card in result.keys():
-        result[card] = {'name': name, 'lines': []}
-      result[card]['lines'].append(line)
+          precision = False
+        if precision:
+          points = results['points']
+        else:
+          points = f"{results['hits']}/{results['figure_hits']}"
+        if not first_pass:
+          line = f"{firstname:<10} {lastname:<20} - {classname:<4} : {placement:>2} - {points:<5}"
+          if args['verbose']:
+            if results['std_medal'] is not None:
+              line += f"({results['std_medal']}) "
+            else:
+              line += "    "
+          if points >= std_medals[group]['b']:
+            if points >= std_medals[group]['s']:
+              line += "(S)"
+            else:
+              line += "(B)"
+          else:
+            line += "   "
+          line += " -"
+          first = True
+        for point in results['results']:
+          series += 1
+          if not first_pass:
+            if not first:
+              line += ","
+              first = False
+            if precision:
+              line += f" {point['points']}"
+            else:
+              line += f" {point['hits']}/{point['figure_hits']}"
+          if not card in result.keys():
+            result[card] = {'name': name, 'lines': []}
+        if not first_pass:
+          result[card]['lines'].append(line)
+      if series > total_series:
+        total_series = series
 
   return result
 
