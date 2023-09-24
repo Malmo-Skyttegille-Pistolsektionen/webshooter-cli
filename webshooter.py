@@ -77,11 +77,15 @@ def fetch_data(competition, page):
   else:
     if page is None:
       print(f"Fetching {args['competition']}")
-      curl = f"curl '{CURL_URL_BASE}' {CURL_OPTIONS}"
+      curl = f"curl -s -w '%{{{{stderr}}}}%{{{{http_code}}}}' '{CURL_URL_BASE}' {CURL_OPTIONS}"
     else:
       print(f"Fetching {page.split('?')[0]}")
-      curl = f"curl '{CURL_URL_PAGE}' {CURL_OPTIONS}"
+      curl = f"curl -s -w '%{{{{stderr}}}}%{{{{http_code}}}}' '{CURL_URL_PAGE}' {CURL_OPTIONS}"
     output = subprocess.run(curl.format(competition = competition, page = page, token = args['token']), shell = True, capture_output = True)
+    httpcode = int(output.stderr.decode())
+    if httpcode != 200:
+      print(f"Failed to get data, error: '{httpcode}'", file=sys.stderr)
+      exit(1)
     output = output.stdout.decode()
 
   return json.loads(output)
