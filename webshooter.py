@@ -101,6 +101,7 @@ def get_info(competition):
   info['venue'] = data['competitions']['contact_venue']
   info['date'] = data['competitions']['date']
   info['signups_close'] = data['competitions']['signups_closing_date']
+  info['type'] = data['competitions']['results_type']
 
   return info
 
@@ -175,7 +176,7 @@ def get_starttimes(competition):
 
   return result
 
-def get_results(competition):
+def get_results(competition, infotype):
   result = {}
 
   data = fetch_data(competition = competition, page = "results")
@@ -188,44 +189,59 @@ def get_results(competition):
     if not first_pass:
       if args['verbose']:
         print("Poängmetoden Precision:")
-      for key in total_points:
-        if key == 'A':
-          s = 46.1 * total_series
-          b = 44.5 * total_series
-        elif key == 'B':
-          s = 47.0 * total_series
-          b = 45.5 * total_series
-        elif key == 'C':
-          s = 47.1 * total_series
-          b = 46.0 * total_series
-        s = math.ceil(s)
-        b = math.ceil(b)
+      if infotype == 'precision' or infotype == 'military':
+        for key in total_points:
+          if infotype == 'precision':
+            if key == 'A':
+              s = 46.1 * total_series
+              b = 44.5 * total_series
+            elif key == 'B':
+              s = 47.0 * total_series
+              b = 45.5 * total_series
+            elif key == 'C':
+              s = 47.1 * total_series
+              b = 46.0 * total_series
+          if infotype == 'military':
+            if key == 'A':
+              s = 540
+              b = 516
+            elif key == 'R':
+              s = 552
+              b = 528
+            elif key == 'B':
+              s = 561
+              b = 537
+            elif key == 'C':
+              s = 564
+              b = 540
+          s = math.ceil(s)
+          b = math.ceil(b)
+          if args['verbose']:
+            print(f"{key} S: {s} B: {b}")
+
+          std_medals[key] = {}
+          std_medals[key]['s'] = s
+          std_medals[key]['b'] = b
+
         if args['verbose']:
-          print(f"{key} S: {s} B: {b}")
+          print("Beräkningsmetoden:")
+        for key in total_points:
+          total_points[key].sort(reverse=True)
+          count = len(total_points[key])
+          s = math.floor(count/9)
+          s = total_points[key][s-1]
+          b = math.floor(count/3)
+          b = total_points[key][b-1]
+          if args['verbose']:
+            print(f"{key}({count}) S: {s} B: {b}")
 
-        std_medals[key] = {}
-        std_medals[key]['s'] = s
-        std_medals[key]['b'] = b
+          std_medals[key]['s'] = min(std_medals[key]['s'], s)
+          std_medals[key]['b'] = min(std_medals[key]['b'], b)
 
-      if args['verbose']:
-        print("Beräkningsmetoden:")
-      for key in total_points:
-        total_points[key].sort(reverse=True)
-        count = len(total_points[key])
-        s = math.floor(count/9)
-        s = total_points[key][s-1]
-        b = math.floor(count/3)
-        b = total_points[key][b-1]
         if args['verbose']:
-          print(f"{key}({count}) S: {s} B: {b}")
-
-        std_medals[key]['s'] = min(std_medals[key]['s'], s)
-        std_medals[key]['b'] = min(std_medals[key]['b'], b)
-
-      if args['verbose']:
-        print("Använda gränser:")
-        for key in std_medals:
-          print(f"{key} S: {std_medals[key]['s']} B: {std_medals[key]['b']}")
+          print("Använda gränser:")
+          for key in std_medals:
+            print(f"{key} S: {std_medals[key]['s']} B: {std_medals[key]['b']}")
 
     for results in data['results']:
       series = 0
@@ -251,19 +267,20 @@ def get_results(competition):
         else:
           points = f"{results['hits']}/{results['figure_hits']}"
         if not first_pass:
-          line = f"{classname:<4} : {placement:>2} - {points:<5}"
-          if args['verbose']:
+          line = f"{classname:<4} : {placement:>2} - {points:<6}"
+          if args['verbose'] or not precision:
             if results['std_medal'] is not None:
               line += f"({results['std_medal']}) "
             else:
               line += "    "
-          if points >= std_medals[group]['b']:
-            if points >= std_medals[group]['s']:
-              line += "(S)"
+          if precision:
+            if points >= std_medals[group]['b']:
+              if points >= std_medals[group]['s']:
+                line += "(S)"
+              else:
+                line += "(B)"
             else:
-              line += "(B)"
-          else:
-            line += "   "
+              line += "   "
           line += " -"
           first = True
         for point in results['results']:
@@ -273,7 +290,7 @@ def get_results(competition):
               line += ","
               first = False
             if precision:
-              line += f" {point['points']}"
+              line += f" {point['points']:>2}"
             else:
               line += f" {point['hits']}/{point['figure_hits']}"
           if not card in result.keys():
@@ -292,7 +309,7 @@ if args['mode'] == "signups":
 elif args['mode'] == "starttimes":
   result = get_starttimes(competition = args['competition'])
 elif args['mode'] == "results":
-  result = get_results(competition = args['competition'])
+  result = get_results(competition = args['competition'], infotype=info['type'])
 else:
   print("Invalid mode")
   print(f"Available modes: {MODES}")
@@ -306,6 +323,7 @@ if config.has_option('global', 'unicode') and not config.getboolean('global', 'u
   i = u"".join([c for c in i if not unicodedata.combining(c)])
 print(f"{i}")
 print(f"Date {info['date']}")
+print(f"Type {info['type']}")
 print("")
 print(f"Webshooter id {info['id']}")
 print(f"Signup closing date {info['signups_close']}")
