@@ -11,7 +11,7 @@ import sys
 import math
 import unicodedata
 
-MODES = ["starttimes", "results", "signups", "starts", "list"]
+MODES = ["starttimes", "results", "signups", "medals", "starts", "list"]
 
 CURL_URL_COMP = "https://webshooter.se/api/v4.1.9/competitions?page=1&per_page=1000&status=all&type=0"
 CURL_URL_BASE = "https://webshooter.se/api/v4.1.9/competitions/{competition}"
@@ -31,8 +31,8 @@ parser = argparse.ArgumentParser(description = "Webshooter start times", formatt
 parser.add_argument('value', help = "Competition ID or year", nargs = '?')
 parser.add_argument('--token', help = "Token, copy from Firefox: Web Developer Tools -> Storage -> Local Storage -> token")
 parser.add_argument('--name', help = "Name")
-parser.add_argument('--club', help = "Club")
-parser.add_argument('--card', help = "Card")
+parser.add_argument('--club', help = "Club, use 'None' to unset")
+parser.add_argument('--card', help = "Card, use 'None' to unset")
 help = "Mode\n  Available modes: "
 for mode in MODES:
   help += f"\n    {mode}"
@@ -43,6 +43,8 @@ for mode in MODES:
       help += "\n      List results from a competition, requires webshooter id as <value>"
     case 'signups':
       help += "\n      List sign up for a competition, requires webshooter id as <value>"
+    case 'medals':
+      help += "\n      List standard medals awarded for a card id, optional year as <value>"
     case 'starts':
       help += "\n      List total starts from a club, optional year as <value>"
     case 'list':
@@ -59,7 +61,16 @@ if os.path.exists(configfile):
   config.read_file(open(configfile))
 
   if args['club'] == None:
-    args['club'] = config.get('global', 'club')
+    try:
+      args['club'] = config.get('global', 'club')
+    except configparser.NoOptionError:
+      args['club'] = None
+
+  if args['card'] == None:
+    try:
+      args['card'] = config.get('global', 'card')
+    except configparser.NoOptionError:
+      args['card'] = None
 
   if args['token'] == None:
     args['token'] = config.get('global', 'token')
@@ -79,6 +90,12 @@ elif args['token'] == None:
   print("", file=sys.stderr)
 
   exit(1)
+
+if args['club'] == "None":
+  args['club'] = None
+
+if args['card'] == "None":
+  args['card'] = None
 
 def printable(string):
   if config.has_option('global', 'unicode') and not config.getboolean('global', 'unicode'):
@@ -308,7 +325,7 @@ def get_results(competition, infotype):
         if total_points.get(group) == None:
           total_points[group] = []
         total_points[group].append(results['points'])
-      if args['club'] == club:
+      if args['club'] == club and args['card'] == None or args['card'] == card:
         if results['figure_hits'] == 0 and results['points'] != 0:
           precision = True
         else:
@@ -321,14 +338,17 @@ def get_results(competition, infotype):
           line = f"{classname:<4} : {placement:>2} - {points:<6}"
           if args['verbose'] or not precision:
             if results['std_medal'] != None:
+              result[card]['medals'][results['std_medal']] += 1
               line += f"({results['std_medal']}) "
             else:
               line += "    "
           if precision:
             if points >= std_medals[group]['b']:
               if points >= std_medals[group]['s']:
+                result[card]['medals']['S'] += 1
                 line += "(S)"
               else:
+                result[card]['medals']['B'] += 1
                 line += "(B)"
             else:
               line += "   "
@@ -345,7 +365,7 @@ def get_results(competition, infotype):
             else:
               line += f" {point['hits']}/{point['figure_hits']}"
           if not card in result.keys():
-            result[card] = {'name': name, 'lines': []}
+            result[card] = {'name': name, 'lines': [], 'medals': {'B': 0, 'S': 0}}
         if not first_pass:
           result[card]['lines'].append(line)
       if series > total_series:
@@ -367,6 +387,43 @@ def get_competitions_list(year = None):
 
   return result
 
+def get_medals(year = None):
+  medals = {}
+
+  competitions = get_competitions_list(year)
+  for competition in competitions.keys():
+    info = get_info(competition)
+    results = get_results(competition, infotype=info['type'])
+    for card in results.keys():
+      if card != 0:
+        if results[card]['medals']['S'] != 0 or results[card]['medals']['B'] != 0:
+          if not info['type'] in medals:
+            medals[info['type']] = {'S': 0, 'B': 0, 'type_readable': competitions[competition]['type_readable']}
+
+          print(printable(f"{info['name']} - {info['city']} - {info['venue']}"))
+          print(f"Medals: B: {results[card]['medals']['B']} S: {results[card]['medals']['S']}");
+          if args['verbose']:
+            for line in results[card]['lines']:
+              name = printable(results[card]['name'])
+              print(f"{name:<20} - {line}")
+
+          medals[info['type']]['S'] += results[card]['medals']['S']
+          medals[info['type']]['B'] += results[card]['medals']['B']
+
+
+  print("")
+  print("")
+  print(f"Card: {args['card']}")
+  print("")
+  for type in medals.keys():
+    print(f"{medals[type]['type_readable']:<20} S: {medals[type]['S']} B: {medals[type]['B']}")
+  print("---")
+  s = sum(m['S'] for m in medals.values() if m)
+  b = sum(m['B'] for m in medals.values() if m)
+  print(f"{'Total':<20} S: {s} B: {b}")
+
+  return None
+
 def get_starts_total(year = None):
   result = {}
   total = 0
@@ -385,11 +442,9 @@ def get_starts_total(year = None):
 
     for card in results.keys():
       if card != 0:
-        if args['card'] == None or args['card'] == card:
-          if args['name'] == None or args['name'] == results[card]['name']:
-            for line in results[card]['lines']:
-              result[info['type']]['results'] += 1
-              total += 1
+        for line in results[card]['lines']:
+          result[info['type']]['results'] += 1
+          total += 1
 
   print(f"Club: {args['club']}")
   print(f"Year: {year}")
@@ -425,6 +480,8 @@ elif args['mode'] == "starttimes":
   result = get_starttimes(competition)
 elif args['mode'] == "results":
   result = get_results(competition, infotype=info['type'])
+elif args['mode'] == "medals":
+  result = get_medals(year = args['value'])
 elif args['mode'] == "starts":
   result = get_starts_total(year = args['value'])
 elif args['mode'] == "list":
@@ -436,11 +493,7 @@ else:
 print("")
 
 if info != None:
-  i = f"{info['name']} - {info['city']} - {info['venue']}"
-  if config.has_option('global', 'unicode') and not config.getboolean('global', 'unicode'):
-    i = unicodedata.normalize('NFKD', i)
-    i = u"".join([c for c in i if not unicodedata.combining(c)])
-  print(f"{i}")
+  print(printable(f"{info['name']} - {info['city']} - {info['venue']}"))
   print(f"Date {info['date']}")
   print(f"Type {info['type']}")
   print("")
@@ -454,11 +507,9 @@ if info != None:
 if result != None:
   for card in result.keys():
     if card != 0:
-      if args['card'] == None or args['card'] == card:
-        if args['name'] == None or args['name'] == result[card]['name']:
-          for line in result[card]['lines']:
-            name = printable(result[card]['name'])
-            print(f"{name:<20} - {line}")
+      for line in result[card]['lines']:
+        name = printable(result[card]['name'])
+        print(f"{name:<20} - {line}")
 
   if 0 in result.keys():
     for line in result[card]['lines']:
