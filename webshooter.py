@@ -11,7 +11,7 @@ import sys
 import math
 import unicodedata
 
-MODES = "starttimes, results, signups, starts, list"
+MODES = ["starttimes", "results", "signups", "starts", "list"]
 
 CURL_URL_COMP = "https://webshooter.se/api/v4.1.9/competitions?page=1&per_page=1000&status=all&type=0"
 CURL_URL_BASE = "https://webshooter.se/api/v4.1.9/competitions/{competition}"
@@ -27,13 +27,27 @@ CURL_OPTIONS = ("-H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/
                 "-H 'Sec-Fetch-Mode: cors' " +
                 "-H 'Sec-Fetch-Site: same-origin'")
 
-parser = argparse.ArgumentParser(description = "Webshooter start times")
+parser = argparse.ArgumentParser(description = "Webshooter start times", formatter_class = argparse.RawTextHelpFormatter)
 parser.add_argument('value', help = "Competition ID or year", nargs = '?')
 parser.add_argument('--token', help = "Token, copy from Firefox: Web Developer Tools -> Storage -> Local Storage -> token")
 parser.add_argument('--name', help = "Name")
 parser.add_argument('--club', help = "Club")
 parser.add_argument('--card', help = "Card")
-parser.add_argument('--mode', help = f"Mode, available modes: {MODES}", required = True)
+help = "Mode\n  Available modes: "
+for mode in MODES:
+  help += f"\n    {mode}"
+  match mode:
+    case 'starttimes':
+      help += "\n      List start times for a competition, requires webshooter id as <value>"
+    case 'results':
+      help += "\n      List results from a competition, requires webshooter id as <value>"
+    case 'signups':
+      help += "\n      List sign up for a competition, requires webshooter id as <value>"
+    case 'starts':
+      help += "\n      List total starts from a club, optional year as <value>"
+    case 'list':
+      help += "\n      List all competitions in webshooter, optinal year as <value>"
+parser.add_argument('--mode', help = help, required = True)
 parser.add_argument('-v', '--verbose', help = "Verbose", required = False, action = 'store_true', default = False)
 parser.add_argument('-d', '--debug', help = "Debug", required = False, action = 'store_true', default = False)
 
@@ -416,8 +430,7 @@ elif args['mode'] == "starts":
 elif args['mode'] == "list":
   result = get_competitions(year = args['value'])
 else:
-  print("Invalid mode")
-  print(f"Available modes: {MODES}")
+  print(f"Invalid mode, {args['mode']}")
   exit(1)
 
 print("")
