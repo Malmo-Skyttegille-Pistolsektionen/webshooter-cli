@@ -201,6 +201,21 @@ def get_results(competition, infotype):
             elif key == 'C':
               s = 47.1 * total_series
               b = 46.0 * total_series
+            elif key in ('M1', 'M2', 'M3', 'M4'):
+              s = 282
+              b = 274
+            elif key == 'M5':
+              s = 294
+              b = 288
+            elif key in ('M6', 'M7'):
+              s = 270
+              b = 253
+            elif key == 'M8':
+              s = 999999
+              b = 999998
+            else:
+              print(f"Unknown weapon group: {key}")
+              sys.exit(1)
           if infotype == 'military':
             if key == 'A':
               s = 540
@@ -214,6 +229,9 @@ def get_results(competition, infotype):
             elif key == 'C':
               s = 564
               b = 540
+            else:
+              print(f"Unknown weapon group: {key}")
+              sys.exit(1)
           s = math.ceil(s)
           b = math.ceil(b)
           if args['verbose']:
@@ -228,10 +246,14 @@ def get_results(competition, infotype):
         for key in total_points:
           total_points[key].sort(reverse=True)
           count = len(total_points[key])
-          s = math.floor(count/9)
-          s = total_points[key][s-1]
-          b = math.floor(count/3)
-          b = total_points[key][b-1]
+          s = 999999
+          b = 999998
+          if count >= 9:
+            s = math.floor(count/9)
+            s = total_points[key][s-1]
+          if count >= 3:
+            b = math.floor(count/3)
+            b = total_points[key][b-1]
           if args['verbose']:
             print(f"{key}({count}) S: {s} B: {b}")
 
@@ -254,7 +276,9 @@ def get_results(competition, infotype):
       placement = results['placement']
       if results['placement'] > 0:
         group = results['weaponclass']['classname_general'][0]
-        if total_points.get(group) is None:
+        if group != 'C':
+          group = results['weaponclass']['classname_general']
+        if total_points.get(group) == None:
           total_points[group] = []
         total_points[group].append(results['points'])
       if args['club'] == club:
