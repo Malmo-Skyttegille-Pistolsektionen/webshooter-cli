@@ -11,8 +11,9 @@ import sys
 import math
 import unicodedata
 
-MODES = "starttimes, results, signups"
+MODES = "starttimes, results, signups, starts, list"
 
+CURL_URL_COMP = "https://webshooter.se/api/v4.1.9/competitions?page=1&per_page=1000&status=all&type=0"
 CURL_URL_BASE = "https://webshooter.se/api/v4.1.9/competitions/{competition}"
 CURL_URL_PAGE = "https://webshooter.se/api/v4.1.9/competitions/{competition}/{page}"
 CURL_OPTIONS = ("-H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0' " +
@@ -27,14 +28,14 @@ CURL_OPTIONS = ("-H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/
                 "-H 'Sec-Fetch-Site: same-origin'")
 
 parser = argparse.ArgumentParser(description = "Webshooter start times")
-parser.add_argument('competition', help = "Competition ID, check the link in webshooter")
+parser.add_argument('value', help = "Competition ID or year", nargs = '?')
 parser.add_argument('--token', help = "Token, copy from Firefox: Web Developer Tools -> Storage -> Local Storage -> token")
 parser.add_argument('--name', help = "Name")
 parser.add_argument('--club', help = "Club")
 parser.add_argument('--card', help = "Card")
 parser.add_argument('--mode', help = f"Mode, available modes: {MODES}", required = True)
-parser.add_argument('-v', '--verbose', help = "Verbose", required = False, action='store_true', default=False)
-parser.add_argument('-d', '--debug', help = "Debug", required = False, action='store_true', default=False)
+parser.add_argument('-v', '--verbose', help = "Verbose", required = False, action = 'store_true', default = False)
+parser.add_argument('-d', '--debug', help = "Debug", required = False, action = 'store_true', default = False)
 
 args = parser.parse_args().__dict__
 
@@ -43,13 +44,13 @@ if os.path.exists(configfile):
   config = configparser.ConfigParser()
   config.read_file(open(configfile))
 
-  if args['club'] is None:
+  if args['club'] == None:
     args['club'] = config.get('global', 'club')
 
-  if args['token'] is None:
+  if args['token'] == None:
     args['token'] = config.get('global', 'token')
 
-elif args['token'] is None:
+elif args['token'] == None:
   parser.print_help(sys.stderr)
   print("", file=sys.stderr)
   print(f"Token not specified and config file {configfile} not found", file=sys.stderr)
@@ -65,9 +66,18 @@ elif args['token'] is None:
 
   exit(1)
 
-def fetch_data(competition, page):
+def printable(string):
+  if config.has_option('global', 'unicode') and not config.getboolean('global', 'unicode'):
+    string = unicodedata.normalize('NFKD', string)
+    string = u"".join([c for c in string if not unicodedata.combining(c)])
+
+  return string
+
+def fetch_data(competition = None, page = None):
   if args['debug']:
-    if page is None:
+    if competition == None:
+      filename = f"testdata/webshooter_competitions.json"
+    elif page == None:
       filename = f"testdata/webshooter_{competition}.json"
     else:
       filename = f"testdata/webshooter_{competition}_{page.split('?')[0]}.json"
@@ -75,8 +85,11 @@ def fetch_data(competition, page):
       print(f"Reading file {filename}")
       output = f.read()
   else:
-    if page is None:
-      print(f"Fetching {args['competition']}")
+    if competition == None:
+      print(f"Fetching competitions")
+      curl = f"curl -s -w '%{{{{stderr}}}}%{{{{http_code}}}}' '{CURL_URL_COMP}' {CURL_OPTIONS}"
+    elif page == None:
+      print(f"Fetching {competition}")
       curl = f"curl -s -w '%{{{{stderr}}}}%{{{{http_code}}}}' '{CURL_URL_BASE}' {CURL_OPTIONS}"
     else:
       print(f"Fetching {page.split('?')[0]}")
@@ -93,7 +106,7 @@ def fetch_data(competition, page):
 def get_info(competition):
   info = {}
 
-  data = fetch_data(competition = competition, page = None)
+  data = fetch_data(competition = competition)
 
   info['id'] = competition
   info['name'] = data['competitions']['name']
@@ -137,7 +150,7 @@ def get_signups(competition):
             same_patrol_as = f"{user['user']['name']} {user['user']['lastname']}"
       if not card in result.keys():
         result[card] = {'name': name, 'lines': []}
-      if same_patrol_as is None:
+      if same_patrol_as == None:
         result[card]['lines'].append(f"{classname:<4}")
       else:
         result[card]['lines'].append(f"{classname:<4} - {same_patrol_as}")
@@ -293,7 +306,7 @@ def get_results(competition, infotype):
         if not first_pass:
           line = f"{classname:<4} : {placement:>2} - {points:<6}"
           if args['verbose'] or not precision:
-            if results['std_medal'] is not None:
+            if results['std_medal'] != None:
               line += f"({results['std_medal']}) "
             else:
               line += "    "
@@ -326,14 +339,82 @@ def get_results(competition, infotype):
 
   return result
 
-info = get_info(competition = args['competition'])
+def get_competitions_list(year = None):
+  result = {}
+
+  data = fetch_data()
+
+  for competition in data['competitions']['data']:
+    if re.match(f"^{year}-", competition['date']) or year == None:
+      result[competition['id']] = {}
+      result[competition['id']]['date'] = competition['date']
+      result[competition['id']]['type'] = competition['results_type']
+      result[competition['id']]['type_readable'] = printable(competition['results_type_human'])
+
+  return result
+
+def get_starts_total(year = None):
+  result = {}
+  total = 0
+
+  competitions = get_competitions_list(year)
+
+  for competition in competitions.keys():
+    info = get_info(competition)
+    results = get_results(competition, infotype=info['type'])
+
+    if info['type'] not in result:
+      result[info['type']] = {}
+      result[info['type']]['results'] = 0
+
+    print(f"Datum: {competitions[competition]['date']} ID: {competition} Typ: {info['type']}")
+
+    for card in results.keys():
+      if card != 0:
+        if args['card'] == None or args['card'] == card:
+          if args['name'] == None or args['name'] == results[card]['name']:
+            for line in results[card]['lines']:
+              result[info['type']]['results'] += 1
+              total += 1
+
+  print(f"Club: {args['club']}")
+  print(f"Year: {year}")
+  print("")
+  print(f"Total starts during {year}: {total}")
+  print("")
+
+  for type in result.keys():
+    print(f"{type}: {result[type]['results']}")
+
+  return None
+
+def get_competitions(year = None):
+  competitions = get_competitions_list(year)
+
+  print(f"Total: {len(competitions)}")
+  for competition in competitions.keys():
+    print(f"Datum: {competitions[competition]['date']} ID: {competition:5} Typ: {competitions[competition]['type_readable']}")
+
+  return None
+
+info = None
+competition = None
+result = None
+
+if args['mode'] == "signups" or args['mode'] == "starttimes" or args['mode'] == "results":
+  competition = args['value']
+  info = get_info(competition)
 
 if args['mode'] == "signups":
-  result = get_signups(competition = args['competition'])
+  result = get_signups(competition)
 elif args['mode'] == "starttimes":
-  result = get_starttimes(competition = args['competition'])
+  result = get_starttimes(competition)
 elif args['mode'] == "results":
-  result = get_results(competition = args['competition'], infotype=info['type'])
+  result = get_results(competition, infotype=info['type'])
+elif args['mode'] == "starts":
+  result = get_starts_total(year = args['value'])
+elif args['mode'] == "list":
+  result = get_competitions(year = args['value'])
 else:
   print("Invalid mode")
   print(f"Available modes: {MODES}")
@@ -341,33 +422,32 @@ else:
 
 print("")
 
-i = f"{info['name']} - {info['city']} - {info['venue']}"
-if config.has_option('global', 'unicode') and not config.getboolean('global', 'unicode'):
-  i = unicodedata.normalize('NFKD', i)
-  i = u"".join([c for c in i if not unicodedata.combining(c)])
-print(f"{i}")
-print(f"Date {info['date']}")
-print(f"Type {info['type']}")
-print("")
-print(f"Webshooter id {info['id']}")
-print(f"Signup closing date {info['signups_close']}")
+if info != None:
+  i = f"{info['name']} - {info['city']} - {info['venue']}"
+  if config.has_option('global', 'unicode') and not config.getboolean('global', 'unicode'):
+    i = unicodedata.normalize('NFKD', i)
+    i = u"".join([c for c in i if not unicodedata.combining(c)])
+  print(f"{i}")
+  print(f"Date {info['date']}")
+  print(f"Type {info['type']}")
+  print("")
+  print(f"Webshooter id {info['id']}")
+  print(f"Signup closing date {info['signups_close']}")
 
-print("")
-print(f"Club: {args['club']}")
-print("")
+  print("")
+  print(f"Club: {args['club']}")
+  print("")
 
-for card in result.keys():
-  if card != 0:
-    if args['card'] is None or args['card'] == card:
-      if args['name'] is None or args['name'] == result[card]['name']:
-        for line in result[card]['lines']:
-          name = result[card]['name']
-          if config.has_option('global', 'unicode') and not config.getboolean('global', 'unicode'):
-            name = unicodedata.normalize('NFKD', name)
-            name = u"".join([c for c in name if not unicodedata.combining(c)])
-          print(f"{name:<20} - {line}")
+if result != None:
+  for card in result.keys():
+    if card != 0:
+      if args['card'] == None or args['card'] == card:
+        if args['name'] == None or args['name'] == result[card]['name']:
+          for line in result[card]['lines']:
+            name = printable(result[card]['name'])
+            print(f"{name:<20} - {line}")
 
-if 0 in result.keys():
-  for line in result[card]['lines']:
-    print(f"{line}")
+  if 0 in result.keys():
+    for line in result[card]['lines']:
+      print(f"{line}")
 
