@@ -10,6 +10,7 @@ import os
 import sys
 import math
 import unicodedata
+import time
 
 MODES = ["starttimes", "results", "signups", "medals", "starts", "list"]
 
@@ -409,7 +410,7 @@ def get_medals(year = None):
 
           medals[info['type']]['S'] += results[card]['medals']['S']
           medals[info['type']]['B'] += results[card]['medals']['B']
-
+    time.sleep(1)
 
   print("")
   print("")
