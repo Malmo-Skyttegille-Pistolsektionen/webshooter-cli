@@ -1,0 +1,5 @@
+[global]
+unicode = True
+card = xx
+club = aa-bbb
+token = <token from web browser, copy from Firefox: Web Developer Tools -> Storage -> Local Storage -> token>
