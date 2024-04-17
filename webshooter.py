@@ -258,6 +258,9 @@ def get_results(competition, infotype):
             elif key == 'M8':
               s = 999999
               b = 999998
+            elif key == 'M9':
+              s = 999999
+              b = 999998
             else:
               print(f"Unknown weapon group: {key}")
               sys.exit(1)
