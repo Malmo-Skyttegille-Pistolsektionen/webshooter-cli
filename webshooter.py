@@ -12,7 +12,7 @@ import math
 import unicodedata
 import time
 
-MODES = ["starttimes", "results", "signups", "medals", "starts", "list"]
+MODES = ["starttimes", "ical", "results", "signups", "medals", "starts", "list"]
 
 CURL_URL_COMP = "https://webshooter.se/api/v4.1.9/competitions?page=1&per_page=1000&status=all&type=0"
 CURL_URL_BASE = "https://webshooter.se/api/v4.1.9/competitions/{competition}"
@@ -40,6 +40,8 @@ for mode in MODES:
   match mode:
     case 'starttimes':
       help += "\n      List start times for a competition, requires webshooter id as <value>"
+    case 'ical':
+      help += "\n      List start times for a competition (in ical format), requires webshooter id as <value>"
     case 'results':
       help += "\n      List results from a competition, requires webshooter id as <value>"
     case 'signups':
@@ -150,6 +152,16 @@ def get_info(competition):
 
   return info
 
+def type_to_string(infotype):
+  if infotype == 'field':
+    return "Fält"
+  elif infotype == 'precision':
+    return 'Precision'
+  elif infotype == 'military':
+    return 'Militär snabbmatch'
+  else:
+    return 'Okänk'
+
 def get_signups(competition):
   result = {}
 
@@ -170,7 +182,7 @@ def get_signups(competition):
     if weaponclass not in weaponclasses:
       weaponclasses[weaponclass] = 0
     weaponclasses[weaponclass] += 1
-    if args['club'] == club:
+    if args['club'] == club and args['card'] == None or args['card'] == card:
       classname = signup['weaponclass']['classname']
       share_patrol = signup['share_patrol_with']
       same_patrol_as = None
@@ -197,10 +209,41 @@ def get_signups(competition):
 
   return result
 
-def get_starttimes(competition):
+def get_starttimes(competition, ical = False):
   result = {}
 
   data = fetch_data(competition = competition, page = "patrols")
+
+  filename = f"webshooter_{info['id']}.ical"
+  file = None
+  if ical == True:
+    file = open(filename, "w")
+    file.write("BEGIN:VCALENDAR\n")
+    file.write("VERSION:2.0\n")
+    file.write("PRODID:-//Webshooter//Pistol//SV\n")
+    file.write("CALSCALE:GREGORIAN\n")
+
+    # Set time zone
+    file.write("BEGIN:VTIMEZONE\n")
+    file.write("TZID:Europe/Stockholm\n")
+    file.write(f"LAST-MODIFIED:{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}\n")
+    file.write("TZURL:https://www.tzurl.org/zoneinfo-outlook/Europe/Stockholm\n")
+    file.write("X-LIC-LOCATION:Europe/Stockholm\n")
+    file.write("BEGIN:DAYLIGHT\n")
+    file.write("TZOFFSETFROM:+0100\n")
+    file.write("TZOFFSETTO:+0200\n")
+    file.write("TZNAME:CEST\n")
+    file.write("DTSTART:19700329T020000\n")
+    file.write("RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3\n")
+    file.write("END:DAYLIGHT\n")
+    file.write("BEGIN:STANDARD\n")
+    file.write("TZOFFSETFROM:+0200\n")
+    file.write("TZOFFSETTO:+0100\n")
+    file.write("TZNAME:CET\n")
+    file.write("DTSTART:19701025T030000\n")
+    file.write("RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10\n")
+    file.write("END:STANDARD\n")
+    file.write("END:VTIMEZONE\n")
 
   for patrol in data['patrols']:
     start_time = patrol['start_time_human']
@@ -208,16 +251,49 @@ def get_starttimes(competition):
     patrolnr = patrol['sortorder']
     for signup in patrol['signups']:
       club = str(signup['club']['districts_id']) + '-' + str(signup['club']['clubs_nr'])
-      if args['club'] == club:
+      card = signup['user']['shooting_card_number']
+      if args['club'] == club and args['card'] == None or args['card'] == card:
         firstname = signup['user']['name']
         lastname = signup['user']['lastname']
-        card = signup['user']['shooting_card_number']
         name = f"{firstname} {lastname}"
         classname = signup['weaponclass']['classname']
+        weapongroup = signup['weaponclass']['classname_general']
         lane = signup['lane']
         if not card in result.keys():
           result[card] = {'name': name, 'lines': []}
         result[card]['lines'].append(f"{classname:<4} : Patrol {patrolnr:<2} ({start_time} - {end_time}) : Lane {lane}")
+        if file != None:
+          file.write("BEGIN:VEVENT\n")
+          file.write(f"UID:webshooter_{info['id']}-{len(result[card]['lines'])}\n")
+          file.write(f"DTSTAMP:{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}\n")
+          file.write(f"DTSTART;TZID=Europe/Stockholm:{info['date'].replace('-','')}T{start_time.replace(':','')}00Z\n")
+          file.write(f"DTEND;TZID=Europe/Stockholm:{info['date'].replace('-','')}T{end_time.replace(':','')}00Z\n")
+          file.write(f"SUMMARY:{info['name']}\n")
+          file.write(f"LOCATION:{info['city']}\n")
+          file.write("DESCRIPTION:")
+          file.write(f"{info['name']}\\n")
+          file.write(f"{info['date']}\\n")
+          file.write(f"{info['city']}\\n")
+          file.write(f"{info['venue']}\\n")
+          file.write(f"{type_to_string(info['type'])}\\n")
+          file.write("\\n")
+          file.write(f"Vapengrupp: {weapongroup}\\n")
+          if info['type'] == 'field':
+            file.write(f"Patrull: {patrolnr}\\n")
+          else:
+            file.write(f"Skjutlag: {patrolnr}\\n")
+          file.write(f"Plats: {lane}\\n")
+          file.write("\\n")
+          file.write(f"<a href='https://webshooter.se/app/competitions/{info['id']}/information'>Webshooter Info</a>\n")
+          file.write("END:VEVENT\n")
+
+  if file != None:
+    file.write("END:VCALENDAR\n")
+    file.close();
+    if not 0 in result.keys():
+      result[0] = {'info': []}
+    result[0]['info'].append("");
+    result[0]['info'].append(f"Start times written to {filename}")
 
   return result
 
@@ -474,7 +550,7 @@ info = None
 competition = None
 result = None
 
-if args['mode'] == "signups" or args['mode'] == "starttimes" or args['mode'] == "results":
+if args['mode'] == "signups" or args['mode'] == "starttimes" or args['mode'] == "ical" or args['mode'] == "results":
   competition = args['value']
   info = get_info(competition)
 
@@ -482,6 +558,8 @@ if args['mode'] == "signups":
   result = get_signups(competition)
 elif args['mode'] == "starttimes":
   result = get_starttimes(competition)
+elif args['mode'] == "ical":
+  result = get_starttimes(competition, ical = True)
 elif args['mode'] == "results":
   result = get_results(competition, infotype=info['type'])
 elif args['mode'] == "medals":
@@ -511,11 +589,17 @@ if info != None:
 if result != None:
   for card in result.keys():
     if card != 0:
-      for line in result[card]['lines']:
-        name = printable(result[card]['name'])
-        print(f"{name:<20} - {line}")
+      if 'lines' in result[card]:
+        for line in result[card]['lines']:
+          name = printable(result[card]['name'])
+          print(f"{name:<20} - {line}")
 
   if 0 in result.keys():
-    for line in result[card]['lines']:
-      print(f"{line}")
+    if 'lines' in result[0]:
+      for line in result[0]['lines']:
+        print(f"{line}")
 
+  if 0 in result.keys():
+    if 'info' in result[0]:
+      for line in result[0]['info']:
+        print(f"{line}")
