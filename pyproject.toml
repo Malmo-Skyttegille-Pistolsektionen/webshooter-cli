@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs", "build", "twine"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+addopts = [
+    "-s",
+    "--import-mode=importlib",
+    "--log-cli-level=DEBUG",
+    "-p no:cacheprovider",
+]
+
+pythonpath = [".", "src", "tests"]
+testpaths = ["tests/unit"]
+
+[project]
+name = "webshooter-client"
+dynamic = ["version"]
+authors = [
+    { name = "Franz Levin" },
+    { name = "Shooter_10000", email = "" },
+]
+description = "A client for interacting with WebShooter.se."
+readme = "README.md"
+
+homepage = "https://github.com/frazz/webshooter"
+repository = "https://github.com/frazz/webshooter"
+documentation = "https://github.com/frazz/webshooter"
+
+urls.Source = 'https://github.com/frazz/webshooter'
+
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+]
+
+requires-python = ">=3.10"
+
+dependencies = ["packaging==24.0", "requests==2.32.3"]
+
+[project.scripts]
+wscli = "webshooter_client.command:main"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.hatch.envs.test]
+dependencies = [
+    "pytest==8.0.0",
+    "pytest-mock==3.14.0",
+    "pytest-sugar==1.0.0",
+    "pytest-cov==4.1.0",
+]
+
+[tool.hatch.envs.lint]
+detached = true
+
+dependencies = ["black==24.1.1", "flake8==7.0.0", "flake8-pyproject==1.2.3"]
+
+[tool.black]
+line-length = 120
+target-version = ['py310']
+
+[tool.flake8]
+ignore = ["W503"]
+max-line-length = 125
+# exclude = tests/*
+max-complexity = 10
