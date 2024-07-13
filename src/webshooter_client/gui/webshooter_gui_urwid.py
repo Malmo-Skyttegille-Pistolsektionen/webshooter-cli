@@ -5,13 +5,8 @@ from webshooter_client.commands.competition_list import CompetitionsListCommand
 from webshooter_client.common.common import command_to_string, printable
 from webshooter_client.common.webshooter_rc import WebShooterRC
 
-nogui = False
-
-try:
-  import urwid
-  from collections.abc import Iterable
-except ModuleNotFoundError:
-  nogui = True
+import urwid
+from collections.abc import Iterable
 
 webshooter_rc = None
 main = None
@@ -38,12 +33,9 @@ class WebShooterGUI:
       raise urwid.ExitMainLoop()
 
   def card_club_to_string(mode: str) -> str:
-    if mode == "card":
-      return "Användare"
-    elif mode == "club":
-      return "Klubb"
-    else:
-      return "Okänd"
+    return { 'card': "Användare",
+              'club': "Klubb",
+            }.get(mode, "Okänd")
 
   def competition_to_string(competition: str) -> str:
     return competition.split(' ', 1)[1]
@@ -51,10 +43,7 @@ class WebShooterGUI:
   def menu(title: str, choices: Iterable[str], to_string, item_chosen) -> urwid.ListBox:
     body = [urwid.Text(title), urwid.Divider()]
     for c in choices:
-      if to_string:
-        button = urwid.Button(printable(to_string(c)))
-      else:
-        button = urwid.Button(c)
+      button = urwid.Button(printable(to_string(c))) if to_string else urwid.Button(c)
       urwid.connect_signal(button, "click", item_chosen, user_args=[c.split()[0]])
       body.append(urwid.AttrMap(button, None, focus_map="reversed"))
 
@@ -114,8 +103,6 @@ class WebShooterGUI:
 
   @staticmethod
   def run(webshooter_rc: WebShooterRC) -> "WebShooterGUI":
-    if nogui:
-      return None
 
     globals()['webshooter_rc'] = webshooter_rc
 
@@ -145,5 +132,3 @@ class WebShooterGUI:
       gui.competition = args['competition']
 
     return gui
-
-

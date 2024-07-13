@@ -122,6 +122,12 @@ class Command:
         )
         parser_competitions.add_argument("year", nargs="?", help="Optional year", type=int)
 
+        parser_competitions = subparsers.add_parser(
+            "ui",
+            parents=[common_parser],
+            help="Run UI",
+        )
+
         args = self.__parser.parse_args()
 
         return args
@@ -136,13 +142,9 @@ def main():
 
     ApplicationConfig(token=webshooter_rc.token)
 
-    args = None
-
-    if len(sys.argv) == 1:
+    args = command.get_arguments(webshooter_rc=webshooter_rc)
+    if args.command == "ui":
        args = WebShooterGUI.run(webshooter_rc=webshooter_rc)
-
-    if args == None:
-       args = command.get_arguments(webshooter_rc=webshooter_rc)
 
     ApplicationConfig(unicode=args.unicode, verbose=args.verbose, token=args.token)
 
