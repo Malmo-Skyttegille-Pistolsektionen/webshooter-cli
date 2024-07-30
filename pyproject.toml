@@ -42,6 +42,7 @@ dependencies = ["packaging==24.0", "requests==2.32.3"]
 
 [project.scripts]
 wscli = "webshooter_client.command:main"
+webshooter = "webshooter_client.command:main"
 
 [tool.hatch.version]
 source = "vcs"
