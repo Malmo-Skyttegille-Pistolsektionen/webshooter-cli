@@ -26,7 +26,7 @@ class MedalsCommand:
                                 "type_readable": competitions[competition]["type_readable"],
                             }
 
-                        print(printable(string=f"{info['name']} - {info['city']} - {info['venue']}"))
+                        print(printable(string=f"{info['date']} - {info['name']} - {info['city']} - {info['venue']}"))
                         print(f"Medals: B: {results[card]['medals']['B']} S: {results[card]['medals']['S']}")
                         if ApplicationConfig().verbose:
                             for line in results[card]["lines"]:

@@ -15,6 +15,7 @@ class CompetitionsListCommand:
         for competition in data["competitions"]["data"]:
             if re.match(f"^{year}-", competition["date"]) or year is None:
                 result[competition["id"]] = {}
+                result[competition["id"]]["name"] = competition["name"]
                 result[competition["id"]]["date"] = competition["date"]
                 result[competition["id"]]["type"] = competition["results_type"]
                 result[competition["id"]]["type_readable"] = printable(string=competition["results_type_human"])

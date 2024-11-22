@@ -109,7 +109,7 @@ class ResultsCommand:
                 )
                 classname = results["weaponclass"]["classname"]
                 placement = results["placement"]
-                if results["placement"] > 0:
+                if placement > 0:
                     group = results["weaponclass"]["classname_general"][0]
                     if group != "C":
                         group = results["weaponclass"]["classname_general"]
@@ -123,13 +123,13 @@ class ResultsCommand:
                     if not first_pass:
                         line = f"{classname:<4} : {placement:>2} - {points:<6}"
                         if ApplicationConfig().verbose or not precision:
-                            if results["std_medal"] is None:
+                            if placement > 0 and results["std_medal"] is not None:
                                 result[su_card]["medals"][results["std_medal"]] += 1
                                 line += f"({results['std_medal']}) "
                             else:
                                 line += "    "
                         if precision:
-                            if points >= std_medals[group]["b"]:
+                            if placement > 0 and points >= std_medals[group]["b"]:
                                 if points >= std_medals[group]["s"]:
                                     result[su_card]["medals"]["S"] += 1
                                     line += "(S)"

@@ -19,6 +19,7 @@ from webshooter_client.commands.starts import StartsCommand
 from webshooter_client.common.common import get_info, print_info, print_result
 from webshooter_client.common.webshooter_rc import WebShooterRC
 
+from webshooter_client.gui.webshooter_gui_urwid import WebShooterGUI
 
 class Command:
     __parser: argparse.ArgumentParser = None
@@ -121,6 +122,12 @@ class Command:
         )
         parser_competitions.add_argument("year", nargs="?", help="Optional year", type=int)
 
+        parser_competitions = subparsers.add_parser(
+            "ui",
+            parents=[common_parser],
+            help="Run UI",
+        )
+
         args = self.__parser.parse_args()
 
         return args
@@ -132,7 +139,12 @@ class Command:
 def main():
     command = Command()
     webshooter_rc: WebShooterRC = WebShooterRC.load_config()
+
+    ApplicationConfig(token=webshooter_rc.token)
+
     args = command.get_arguments(webshooter_rc=webshooter_rc)
+    if args.command == "ui":
+       args = WebShooterGUI.run(webshooter_rc=webshooter_rc)
 
     ApplicationConfig(unicode=args.unicode, verbose=args.verbose, token=args.token)
 
@@ -165,6 +177,8 @@ def main():
         result = StartsCommand.get_starts_total(club=args.club, card=args.card, year=args.year)
     elif args.command == "competitions":
         result = CompetitionsListCommand.get_competitions(year=args.year)
+    elif args.command == "exit":
+        sys.exit(1)
     else:
         command.print_help()
         sys.exit(1)
