@@ -29,7 +29,8 @@ class CompetitionsListCommand:
         print(f"Total: {len(competitions)}")
         for competition in competitions.keys():
             print(
-                f"Datum: {competitions[competition]['date']} ID: {competition:5} Typ: {competitions[competition]['type_readable']}"
+                f"Datum: {competitions[competition]['date']} ID: {competition:5} "
+                f"Typ: {competitions[competition]['type_readable']}"
             )
 
         return None

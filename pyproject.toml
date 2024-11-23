@@ -4,14 +4,19 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 addopts = [
+    "-rsxX",
     "-s",
     "--import-mode=importlib",
     "--log-cli-level=DEBUG",
-    "-p no:cacheprovider",
+    '-m not slow and not integration',
 ]
-
 pythonpath = [".", "src", "tests"]
-testpaths = ["tests/unit"]
+testpaths = ["tests"]
+markers = [
+    "flaky: tests that can randomly fail through no change to the code",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: tests that require external resources",
+]
 
 [project]
 name = "webshooter-client"
@@ -38,7 +43,7 @@ classifiers = [
 
 requires-python = ">=3.10"
 
-dependencies = ["packaging==24.0", "requests==2.32.3"]
+dependencies = ["packaging==24.2", "requests==2.32.3", "urwid==2.6.16"]
 
 [project.scripts]
 wscli = "webshooter_client.command:main"
@@ -50,18 +55,16 @@ source = "vcs"
 [tool.hatch.version.raw-options]
 local_scheme = "no-local-version"
 
-[tool.hatch.envs.test]
+[tool.hatch.envs.dev]
 dependencies = [
-    "pytest==8.0.0",
+    "pytest==8.3.3",
     "pytest-mock==3.14.0",
     "pytest-sugar==1.0.0",
-    "pytest-cov==4.1.0",
+    "pytest-cov==6.0.0",
+    "black==24.10.0",
+    "flake8==7.1.1",
+    "flake8-pyproject==1.2.3",
 ]
-
-[tool.hatch.envs.lint]
-detached = true
-
-dependencies = ["black==24.1.1", "flake8==7.0.0", "flake8-pyproject==1.2.3"]
 
 [tool.black]
 line-length = 120

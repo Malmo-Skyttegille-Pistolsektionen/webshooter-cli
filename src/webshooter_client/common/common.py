@@ -1,5 +1,4 @@
 import json
-import sys
 import unicodedata
 from typing import Any, Dict, Optional, Union
 
@@ -65,21 +64,25 @@ def print_result(result: Optional[Dict[int, Any]]) -> None:
 
 
 def infotype_to_string(infotype: str) -> str:
-    return { "field": "Fält",
-             "precision": "Precision",
-             "military": "Militär snabbmatch",
-           }.get(infotype, "Okänd")
+    return {
+        "field": "Fält",
+        "precision": "Precision",
+        "military": "Militär snabbmatch",
+    }.get(infotype, "Okänd")
+
 
 def command_to_string(mode: str) -> str:
-    return { "signups": "Anmälda",
-             "starttimes": "Starttider",
-             "ical": "Starttider med ical filer",
-             "results": "Resultat",
-             "medals": "Standardmedaljer",
-             "starts": "Starter",
-             "competitions": "Tävlingar",
-             "ui": "UI",
-           }.get(mode, "Okänd")
+    return {
+        "signups": "Anmälda",
+        "starttimes": "Starttider",
+        "ical": "Starttider med ical filer",
+        "results": "Resultat",
+        "medals": "Standardmedaljer",
+        "starts": "Starter",
+        "competitions": "Tävlingar",
+        "ui": "UI",
+    }.get(mode, "Okänd")
+
 
 def fetch_data(competition: Optional[int] = None, page: Optional[str] = None) -> Dict[str, Any]:
     BASE_URL_COMP = "https://webshooter.se/api/v4.1.9/competitions?page=1&per_page=1000&status=all&type=0"

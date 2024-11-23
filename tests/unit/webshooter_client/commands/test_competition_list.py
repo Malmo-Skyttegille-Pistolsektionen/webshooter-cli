@@ -1,7 +1,5 @@
-from tests.unit.conftest import fetch_data_X, fetch_data_side_effect
+from tests.unit.conftest import fetch_data_side_effect
 from webshooter_client.commands.competition_list import CompetitionsListCommand
-
-from webshooter_client.common import common
 
 
 def test_competition_list(mocker, testdata_resources_rootdir_w_path):

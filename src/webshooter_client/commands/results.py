@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import math
-import sys
 
 from webshooter_client.common.application_config import ApplicationConfig
 from webshooter_client.common.common import fetch_data
@@ -8,7 +7,7 @@ from webshooter_client.common.common import fetch_data
 
 @dataclass(kw_only=True)
 class ResultsCommand:
-    def get_results(competition, club, card, info_type):
+    def get_results(competition, club, card, info_type):  # noqa: C901
         result = {}
 
         data = fetch_data(competition=competition, page="results")

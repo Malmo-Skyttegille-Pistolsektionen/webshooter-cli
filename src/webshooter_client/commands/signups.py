@@ -5,7 +5,7 @@ from webshooter_client.common.common import fetch_data
 
 @dataclass(kw_only=True)
 class SignupsCommand:
-    def get_signups(competition: int, club: str, card: int):
+    def get_signups(competition: int, club: str, card: int):  # noqa: C901
         result = {}
 
         data = fetch_data(competition=competition, page="signups?page=1&per_page=1000")

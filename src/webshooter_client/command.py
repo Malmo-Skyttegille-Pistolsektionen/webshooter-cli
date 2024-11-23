@@ -5,7 +5,6 @@ from importlib.metadata import version
 import os
 import sys
 
-
 if __package__ is None or len(__package__) == 0:
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -18,8 +17,8 @@ from webshooter_client.commands.start_times import StartTimesCommand
 from webshooter_client.commands.starts import StartsCommand
 from webshooter_client.common.common import get_info, print_info, print_result
 from webshooter_client.common.webshooter_rc import WebShooterRC
-
 from webshooter_client.gui.webshooter_gui_urwid import WebShooterGUI
+
 
 class Command:
     __parser: argparse.ArgumentParser = None
@@ -144,7 +143,7 @@ def main():
 
     args = command.get_arguments(webshooter_rc=webshooter_rc)
     if args.command == "ui":
-       args = WebShooterGUI.run(webshooter_rc=webshooter_rc)
+        args = WebShooterGUI.run(webshooter_rc=webshooter_rc)
 
     ApplicationConfig(unicode=args.unicode, verbose=args.verbose, token=args.token)
 
