@@ -57,7 +57,7 @@ local_scheme = "no-local-version"
 
 [tool.hatch.envs.dev]
 dependencies = [
-    "pytest==8.3.3",
+    "pytest==8.3.4",
     "pytest-mock==3.14.0",
     "pytest-sugar==1.0.0",
     "pytest-cov==6.0.0",
