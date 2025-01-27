@@ -1,4 +1,5 @@
 import json
+import time
 import unicodedata
 from typing import Any, Dict, Optional, Union
 
@@ -84,7 +85,9 @@ def command_to_string(mode: str) -> str:
     }.get(mode, "Okänd")
 
 
-def fetch_data(competition: Optional[int] = None, page: Optional[str] = None) -> Dict[str, Any]:
+def fetch_data(
+    competition: Optional[int] = None, page: Optional[str] = None, max_retries: int = 5, backoff_factor: int = 10
+) -> Dict[str, Any]:
     BASE_URL_COMP = "https://webshooter.se/api/v4.1.9/competitions?page=1&per_page=1000&status=all&type=0"
     BASE_URL_BASE = "https://webshooter.se/api/v4.1.9/competitions/{competition}"
     BASE_URL_PAGE = "https://webshooter.se/api/v4.1.9/competitions/{competition}/{page}"
@@ -115,9 +118,24 @@ def fetch_data(competition: Optional[int] = None, page: Optional[str] = None) ->
         print(f"Fetching {page.split('?')[0]}")
         url = BASE_URL_PAGE.format(competition=competition, page=page)
 
-    response = requests.get(url, headers=headers)
+    retries = 0
+    while retries < max_retries:
+        try:
+            response = requests.get(url, headers=headers)
 
-    # Raise an exception if the HTTP request fails
-    response.raise_for_status()
+            # Handle HTTP response codes explicitly
+            if response.status_code == 200:
+                return json.loads(response.text)
+            elif response.status_code == 500:
+                retries += 1
+                wait_time = backoff_factor * retries
+                print(f"HTTP 500 Error. Retrying {retries}/{max_retries} in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                print(f"Unexpected HTTP status code: {response.status_code}. Response: {response.text}")
+                response.raise_for_status()  # Optional: Re-raise for unexpected errors
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
+            raise e
 
-    return json.loads(response.text)
+    raise Exception(f"Failed to fetch the URL after {max_retries} retries")

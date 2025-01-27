@@ -14,6 +14,9 @@ class MedalsCommand:
 
         competitions = CompetitionsListCommand.get_competitions_list(year=year)
         for competition in competitions.keys():
+            if competition == 53:  # skip the test competition
+                continue
+
             info = get_info(competition=competition)
             results = ResultsCommand.get_results(competition=competition, club=club, card=card, info_type=info["type"])
             for card in results.keys():
