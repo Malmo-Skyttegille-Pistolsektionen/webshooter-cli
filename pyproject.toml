@@ -43,7 +43,7 @@ classifiers = [
 
 requires-python = ">=3.10"
 
-dependencies = ["packaging==25.0", "requests==2.32.3", "urwid==2.6.16"]
+dependencies = ["packaging==25.0", "requests==2.32.4", "urwid==2.6.16"]
 
 [project.scripts]
 wscli = "webshooter_client.command:main"
