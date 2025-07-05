@@ -1,9 +1,10 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-import argparse
 from importlib.metadata import version
 import os
 import sys
+
+import configargparse
 
 if __package__ is None or len(__package__) == 0:
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -16,114 +17,84 @@ from webshooter_client.commands.signups import SignupsCommand
 from webshooter_client.commands.start_times import StartTimesCommand
 from webshooter_client.commands.starts import StartsCommand
 from webshooter_client.common.common import get_info, print_info, print_result
-from webshooter_client.common.webshooter_rc import WebShooterRC
 from webshooter_client.gui.webshooter_gui_urwid import WebShooterGUI
 
 
 class Command:
-    __parser: argparse.ArgumentParser = None
+    __parser: configargparse.ArgumentParser = None
 
-    def _add_argument_version(self, argument_parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    def _add_argument_version(self, argument_parser: configargparse.ArgumentParser) -> configargparse.ArgumentParser:
         ver: str = "local dev" if (__package__ is None or len(__package__) == 0) else f"{version('webshooter_client')}"
         argument_parser.add_argument("-V", "--version", action="version", version=f"{ver}")
         return argument_parser
 
-    def get_arguments(self, webshooter_rc: WebShooterRC) -> argparse.Namespace:
-        class ComboRawTextandArgsDefaultUltimateHelpFormatter(
-            argparse.RawTextHelpFormatter, argparse.ArgumentDefaultsHelpFormatter
-        ):
-            pass
+    def get_arguments(self) -> configargparse.Namespace:
 
-        self.__parser = argparse.ArgumentParser(
+        self.__parser = configargparse.ArgumentParser(
+            default_config_files=[os.path.expanduser("~/.webshooter.rc")],
             description="Webshooter CLI tool",
-            formatter_class=ComboRawTextandArgsDefaultUltimateHelpFormatter,
-            epilog=(
-                "Use --token or create config file (all options are optional) as per example:\n\n"
-                "[global]\n"
-                "token = <token>\n"
-                "club = xx-yyy\n"
-                "unicode = [True|False]\n"
-            ),
+            formatter_class=configargparse.ArgumentDefaultsRawHelpFormatter,
         )
 
         self._add_argument_version(self.__parser)
 
-        subparsers = self.__parser.add_subparsers(dest="command", required=True)
-
-        # Create parsers for each command
-        common_parser = argparse.ArgumentParser(add_help=False)
-        common_parser.add_argument(
+        self.__parser.add_argument(
             "--token",
             help="web token, copy from Browser -> Developer Tools -> Storage -> Local Storage -> token",
         )
-        common_parser.add_argument("--name", help="Name")
-        common_parser.add_argument("--club", help="Club, use 'None' to unset")
-        common_parser.add_argument("--card", help="Card, use 'None' to unset")
-        common_parser.add_argument("-u", "--unicode", help="Unicode", action="store_true", default=False)
-        common_parser.add_argument("-v", "--verbose", help="Verbose", action="store_true", default=False)
+        self.__parser.add_argument("--name", help="Name")
+        self.__parser.add_argument("--club", help="Club, use 'None' to unset")
+        self.__parser.add_argument("--card", help="Card, use 'None' to unset")
+        self.__parser.add_argument("-u", "--unicode", help="Unicode", action="store_true", default=False)
+        self.__parser.add_argument("-v", "--verbose", help="Verbose", action="store_true", default=False)
+        self.__parser.add_argument("-c", "--config", is_config_file=True, help="Config file path")
 
-        # Update common_parser with values from webshooter_rc
-        if webshooter_rc.club is not None:
-            common_parser.set_defaults(club=webshooter_rc.club)
-        if webshooter_rc.card is not None:
-            common_parser.set_defaults(card=webshooter_rc.card)
-        if webshooter_rc.token is not None:
-            common_parser.set_defaults(token=webshooter_rc.token)
-        if webshooter_rc.unicode is not None:
-            common_parser.set_defaults(unicode=webshooter_rc.unicode)
+        subparsers = self.__parser.add_subparsers(dest="command", required=True)
 
         parser_starttimes = subparsers.add_parser(
             "starttimes",
-            parents=[common_parser],
             help="List start times for a competition",
         )
         parser_starttimes.add_argument("competition", help="Competition ID", type=int, default=None)
 
         parser_ical = subparsers.add_parser(
             "ical",
-            parents=[common_parser],
             help="Save start times for a competition (in ical format) to webshooter.ical",
         )
         parser_ical.add_argument("competition", help="Competition ID", type=int, default=None)
 
         parser_results = subparsers.add_parser(
             "results",
-            parents=[common_parser],
             help="List results from a competition",
         )
         parser_results.add_argument("competition", help="Competition ID", type=int, default=None)
 
         parser_signups = subparsers.add_parser(
             "signups",
-            parents=[common_parser],
             help="List signups for a competition",
         )
         parser_signups.add_argument("competition", help="Competition ID", type=int, default=None)
 
         parser_medals = subparsers.add_parser(
             "medals",
-            parents=[common_parser],
             help="List standard medals awarded for a card",
         )
         parser_medals.add_argument("year", nargs="?", help="Optional year", type=int)
 
         parser_starts = subparsers.add_parser(
             "starts",
-            parents=[common_parser],
             help="List total starts from a club",
         )
         parser_starts.add_argument("year", nargs="?", help="Optional year", type=int)
 
         parser_competitions = subparsers.add_parser(
             "competitions",
-            parents=[common_parser],
             help="List all competitions in webshooter",
         )
         parser_competitions.add_argument("year", nargs="?", help="Optional year", type=int)
 
         parser_competitions = subparsers.add_parser(
             "ui",
-            parents=[common_parser],
             help="Run UI",
         )
 
@@ -137,15 +108,27 @@ class Command:
 
 def main():
     command = Command()
-    webshooter_rc: WebShooterRC = WebShooterRC.load_config()
 
-    ApplicationConfig(token=webshooter_rc.token)
+    args = command.get_arguments()
 
-    args = command.get_arguments(webshooter_rc=webshooter_rc)
+    # Unset card/club if user passed --card=None or --card ""
+    for key in ("club", "card"):
+        val = getattr(args, key, None)
+        if isinstance(val, str) and (val.strip().lower() == "none" or val.strip() == ""):
+            setattr(args, key, None)
+
+    # # Unset any argument if user passed --arg=None or --arg ""
+    # for key, val in vars(args).items():
+    #     if isinstance(val, str) and (val.strip().lower() == "none" or val.strip() == ""):
+    #         setattr(args, key, None)
+
+    ApplicationConfig(token=args.token, club=args.club, card=args.card, unicode=args.unicode, verbose=args.verbose)
+
     if args.command == "ui":
-        args = WebShooterGUI.run(webshooter_rc=webshooter_rc)
-
-    ApplicationConfig(unicode=args.unicode, verbose=args.verbose, token=args.token)
+        args_for_gui = WebShooterGUI.run(ApplicationConfig())
+        if args_for_gui is None:
+            sys.exit(1)
+        args = configargparse.Namespace(**args_for_gui)
 
     exit_code: int = 0
 

@@ -21,7 +21,7 @@ e.g. `pip install dist/webshooter_client-0.1.dev27-py3-none-any.whl`
 
 ### Direct in git repo
 
-`$src/webshooter_client/command.py --help`
+`hatch run python src/webshooter_client/command.py --help`
 
 
 ## Linting and Testing
