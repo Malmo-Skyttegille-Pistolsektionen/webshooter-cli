@@ -1,41 +1,43 @@
-from dataclasses import dataclass
+from typing import Optional
 
-from webshooter_client.commands.competition_list import CompetitionsListCommand
+from tabulate import tabulate
+
 from webshooter_client.commands.results import ResultsCommand
-from webshooter_client.common.common import get_info
+from webshooter_client.api import api_calls
+from webshooter_client.models.competition import Competition, CompetitionType
+import logging
 
 
-@dataclass(kw_only=True)
 class StartsCommand:
-    def get_starts_total(club, card, year=None):
-        result = {}
-        total = 0
 
-        competitions = CompetitionsListCommand.get_competitions_list(year=year)
+    @staticmethod
+    def get_starts_total(club, card, year: Optional[int] = None) -> None:
+        counters = {comp_type: 0 for comp_type in CompetitionType}
 
-        for competition in competitions.keys():
-            info = get_info(competition=competition)
-            results = ResultsCommand.get_results(competition=competition, club=club, card=card, info_type=info["type"])
+        competitions: dict[int, Competition] = api_calls.get_competitions(year=year)
 
-            if info["type"] not in result:
-                result[info["type"]] = {}
-                result[info["type"]]["results"] = 0
+        for competition in competitions.values():
+            logging.info(f"Date: {competition.competition_date} ID: {competition.id} Type: {competition.type}")
 
-            print(f"Datum: {competitions[competition]['date']} ID: {competition} Typ: {info['type']}")
+            results = ResultsCommand.get_results_for_competition(competition_id=competition.id, club=club, card=card)
 
             for card in results.keys():
                 if card != 0:
-                    for line in results[card]["lines"]:
-                        result[info["type"]]["results"] += 1
-                        total += 1
+                    counters[competition.type] += len(results[card]["lines"])
 
-        print(f"Club: {club}")
-        print(f"Year: {year}")
-        print("")
-        print(f"Total starts during {year}: {total}")
-        print("")
+        # Prepare data for tabulate
+        table_data = []
+        table_data.append(["Club", club])
+        table_data.append(["Card", card])
+        table_data.append(["Year", year])
+        table_data.append(["", ""])
 
-        for type in result.keys():
-            print(f"{type}: {result[type]['results']}")
+        for comp_type in counters.keys():
+            table_data.append([comp_type.display_name, counters[comp_type]])
 
-        return None
+        table_data.append(["", ""])
+        table_data.append(["Total starts", sum([counters[type] for type in counters.keys()])])
+
+        print(tabulate(table_data, tablefmt="simple"))
+
+        return

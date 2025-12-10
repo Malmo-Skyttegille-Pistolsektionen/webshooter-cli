@@ -1,54 +1,48 @@
-from dataclasses import dataclass
-import time
-
-from webshooter_client.commands.competition_list import CompetitionsListCommand
-from webshooter_client.commands.results import ResultsCommand
-from webshooter_client.common.application_config import ApplicationConfig
-from webshooter_client.common.common import get_info, printable
+from webshooter_client.api.api_calls import get_competitions, get_results
+from webshooter_client.models.competition import Competition, CompetitionType
+from tabulate import tabulate
+from webshooter_client.models.result import StdMedal
 
 
-@dataclass(kw_only=True)
 class MedalsCommand:
-    def get_medals(club, card, year: int):
-        medals = {}
+    def get_medals(club, card, year: int) -> None:
 
-        competitions = CompetitionsListCommand.get_competitions_list(year=year)
-        for competition in competitions.keys():
-            if competition == 53:  # skip the test competition
+        shooter_medals: dict[int, dict[CompetitionType, dict[StdMedal, int]]] = {}
+
+        competitions: dict[int, Competition] = get_competitions(year=year)
+
+        for competition in competitions.values():
+            if competition.id == 53:  # skip the test competition
                 continue
 
-            info = get_info(competition=competition)
-            results = ResultsCommand.get_results(competition=competition, club=club, card=card, info_type=info["type"])
-            for card in results.keys():
-                if card != 0:
-                    if results[card]["medals"]["S"] != 0 or results[card]["medals"]["B"] != 0:
-                        if not info["type"] in medals:
-                            medals[info["type"]] = {
-                                "S": 0,
-                                "B": 0,
-                                "type_readable": competitions[competition]["type_readable"],
-                            }
+            results = get_results(competition_id=competition.id)
 
-                        print(printable(string=f"{info['date']} - {info['name']} - {info['city']} - {info['venue']}"))
-                        print(f"Medals: B: {results[card]['medals']['B']} S: {results[card]['medals']['S']}")
-                        if ApplicationConfig().verbose:
-                            for line in results[card]["lines"]:
-                                name = printable(results[card]["name"])
-                                print(f"{name:<20} - {line}")
+            # sum up medals per shooter and competition type
+            for result in results:
+                signup = result.signup
+                key = (signup.shooting_card_number, signup.fullname)
 
-                        medals[info["type"]]["S"] += results[card]["medals"]["S"]
-                        medals[info["type"]]["B"] += results[card]["medals"]["B"]
-            time.sleep(1)
+                if club == signup.spsf_club_number and (card is None or card == signup.shooting_card_number):
 
-        print("")
-        print("")
-        print(f"Card: {card}")
-        print("")
-        for type in medals.keys():
-            print(f"{medals[type]['type_readable']:<20} S: {medals[type]['S']} B: {medals[type]['B']}")
-        print("---")
-        s = sum(m["S"] for m in medals.values() if m)
-        b = sum(m["B"] for m in medals.values() if m)
-        print(f"{'Total':<20} S: {s} B: {b}")
+                    if key not in shooter_medals:
+                        shooter_medals[key] = {}
 
-        return None
+                    if competition.type not in shooter_medals[key]:
+                        shooter_medals[key][competition.type] = {}
+
+                    if result.std_medal:
+                        current_count = shooter_medals[key][competition.type].get(result.std_medal, 0)
+                        shooter_medals[key][competition.type][result.std_medal] = current_count + 1
+
+        # Prepare data for tabulate
+        table_data = []
+        for key, comp_types in shooter_medals.items():
+            for comp_type, medals in comp_types.items():
+                silver = medals.get(StdMedal.SILVER, 0)
+                bronze = medals.get(StdMedal.BRONZE, 0)
+                table_data.append([key[0], key[1], comp_type.display_name, silver, bronze])
+
+        print(f"Medals for year {year}" if year else "")
+
+        headers = ["Card Number", "Name", "Type", "Silver", "Bronze"]
+        print(tabulate(table_data, headers=headers, tablefmt="simple"))

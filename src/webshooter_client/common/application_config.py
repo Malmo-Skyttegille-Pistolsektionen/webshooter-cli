@@ -14,5 +14,3 @@ class ApplicationConfig(metaclass=SingletonMeta):
     unicode: bool = field(default=True)
     verbose: bool = field(default=False)
     token: Optional[str] = field(default=None)
-    club: Optional[str] = field(default=None)
-    card: Optional[str] = field(default=None)

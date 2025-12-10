@@ -1,54 +1,91 @@
-from dataclasses import dataclass
+from typing import Dict, List
 
-from webshooter_client.common.common import fetch_data
+from webshooter_client.api.api_calls import get_competition, get_signups
+from webshooter_client.models.competition import Competition
+from webshooter_client.models.signup import Signup
+from tabulate import tabulate
 
 
-@dataclass(kw_only=True)
 class SignupsCommand:
-    def get_signups(competition: int, club: str, card: int):  # noqa: C901
-        result = {}
 
-        data = fetch_data(competition=competition, page="signups?page=1&per_page=1000")
+    @staticmethod
+    def get_signups(competition_id: int, club: str, card: int) -> None:  # noqa: C901
+        result: Dict[int, Dict[str, object]] = {}
 
-        weaponclasses = {}
-        signup_count = 0
+        competition: Competition = get_competition(competition_id=competition_id)
 
-        for signup in data["signups"]["data"]:
-            weaponclass = signup["weaponclass"]["classname_general"]
-            if weaponclass in ["CD", "CVY", "CVÄ"]:
-                weaponclass = "C"
-            firstname = signup["user"]["name"]
-            lastname = signup["user"]["lastname"]
-            su_card = signup["user"]["shooting_card_number"]
-            name = f"{firstname} {lastname}"
-            su_club = str(signup["club"]["districts_id"]) + "-" + str(signup["club"]["clubs_nr"])
-            if weaponclass not in weaponclasses:
-                weaponclasses[weaponclass] = 0
-            weaponclasses[weaponclass] += 1
+        # output some info about the competition
+        print(f"Competition: {competition.name}")
+        print(f"Type: {competition.type.display_name}")
+        print(f"Date: {competition.competition_date.isoformat()}")
+        print(f"Location: {competition.venue}, {competition.city}")
+        print("")
 
-            if club == su_club and card is None or card == su_card:
-                classname = signup["weaponclass"]["classname"]
-                share_patrol = signup["share_patrol_with"]
-                same_patrol_as = None
-                signup_count += 1
-                if share_patrol != 0:
-                    same_patrol_as = share_patrol
-                    for user in data["signups"]["data"]:
-                        if user["user"]["shooting_card_number"] == f"{share_patrol}":
-                            same_patrol_as = f"{user['user']['name']} {user['user']['lastname']}"
-                if su_card not in result.keys():
-                    result[su_card] = {"name": name, "lines": []}
-                if same_patrol_as is None:
-                    result[su_card]["lines"].append(f"{classname:<4}")
-                else:
-                    result[su_card]["lines"].append(f"{classname:<4} - {same_patrol_as}")
+        signups: List[Signup] = get_signups(competition_id=competition_id)
 
-        result[0] = {"name": su_club, "lines": []}
-        result[0]["lines"].append("")
-        result[0]["lines"].append(f"Total from {su_club}: {signup_count}")
-        result[0]["lines"].append("")
-        result[0]["lines"].append("Total signups in weapon classes:")
-        for key in sorted(weaponclasses):
-            result[0]["lines"].append(f"{key}: {weaponclasses[key]}")
+        counter_all_starts_in_weaponclasses: Dict[str, int] = {}
+        counter_club_starts_in_weaponclasses: Dict[str, int] = {}
 
-        return result
+        for signup in signups:
+            counter_all_starts_in_weaponclasses[signup.weapon_class_general] = (
+                counter_all_starts_in_weaponclasses.get(signup.weapon_class_general, 0) + 1
+            )
+
+            if club == signup.spsf_club_number and (card is None or card == signup.shooting_card_number):
+
+                counter_club_starts_in_weaponclasses[signup.weapon_class_general] = (
+                    counter_club_starts_in_weaponclasses.get(signup.weapon_class_general, 0) + 1
+                )
+
+                card_number = signup.shooting_card_number
+                if card_number not in result:
+                    result[card_number] = {
+                        "card": card_number,
+                        "name": signup.fullname,
+                        "classes": set(),
+                        "patrol_mates": list(),
+                    }
+                result[card_number]["classes"].add(signup.weapon_class)
+
+                if signup.share_patrol_with:
+                    mate = next(
+                        (mate for mate in signups if mate.shooting_card_number == signup.share_patrol_with), None
+                    )
+                    if mate:
+                        result[card_number]["patrol_mates"].append(f"{mate.fullname} ({mate.weapon_class})")
+                    else:
+                        result[card_number]["patrol_mates"].append(str(signup.share_patrol_with))
+
+        # Build table data signups
+        table_data = []
+        for card_number in sorted(result.keys()):
+            signup_data = result[card_number]
+            classes_str = ", ".join(sorted(signup_data["classes"]))
+            patrol_mates_str = ", ".join(sorted(signup_data["patrol_mates"]))
+            table_data.append([signup_data["card"], signup_data["name"], classes_str, patrol_mates_str])
+
+        headers = ["Card", "Name", "Classes", "Patrol Mates"]
+        print(tabulate(table_data, headers=headers, tablefmt="simple"))
+
+        print("\n\n")
+
+        # Create table for signups per weapon class
+        signups_stats_table_data = []
+        all_classes = sorted(
+            set(counter_all_starts_in_weaponclasses.keys()) | set(counter_club_starts_in_weaponclasses.keys())
+        )
+
+        total_club = 0
+        total_all = 0
+        for weapon_class in all_classes:
+            all_count = counter_all_starts_in_weaponclasses.get(weapon_class, 0)
+            club_count = counter_club_starts_in_weaponclasses.get(weapon_class, 0)
+            signups_stats_table_data.append([weapon_class, club_count, all_count])
+            total_club += club_count
+            total_all += all_count
+
+        # Add total row
+        signups_stats_table_data.append(["Total", total_club, total_all])
+
+        stats_headers = ["Weapon Class", f"Club {club}", "All"]
+        print(tabulate(signups_stats_table_data, headers=stats_headers, tablefmt="simple"))

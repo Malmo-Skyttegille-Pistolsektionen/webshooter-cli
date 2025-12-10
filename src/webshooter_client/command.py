@@ -6,18 +6,19 @@ import sys
 
 import configargparse
 
+
 if __package__ is None or len(__package__) == 0:
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from webshooter_client.commands.competition_list import CompetitionsListCommand
+from webshooter_client.api import api_calls
 from webshooter_client.common.application_config import ApplicationConfig
+from webshooter_client.commands.competitions import CompetitionsCommand
 from webshooter_client.commands.medals import MedalsCommand
 from webshooter_client.commands.results import ResultsCommand
 from webshooter_client.commands.signups import SignupsCommand
 from webshooter_client.commands.start_times import StartTimesCommand
+from webshooter_client.commands.ical_export import ICalExportCommand
 from webshooter_client.commands.starts import StartsCommand
-from webshooter_client.common.common import get_info, print_info, print_result
-from webshooter_client.gui.webshooter_gui_urwid import WebShooterGUI
 
 
 class Command:
@@ -42,50 +43,56 @@ class Command:
             "--token",
             help="web token, copy from Browser -> Developer Tools -> Storage -> Local Storage -> token",
         )
-        self.__parser.add_argument("--name", help="Name")
-        self.__parser.add_argument("--club", help="Club, use 'None' to unset")
-        self.__parser.add_argument("--card", help="Card, use 'None' to unset")
         self.__parser.add_argument("-u", "--unicode", help="Unicode", action="store_true", default=False)
         self.__parser.add_argument("-v", "--verbose", help="Verbose", action="store_true", default=False)
         self.__parser.add_argument("-c", "--config", is_config_file=True, help="Config file path")
 
         subparsers = self.__parser.add_subparsers(dest="command", required=True)
 
-        parser_starttimes = subparsers.add_parser(
-            "starttimes",
-            help="List start times for a competition",
-        )
-        parser_starttimes.add_argument("competition", help="Competition ID", type=int, default=None)
-
-        parser_ical = subparsers.add_parser(
-            "ical",
-            help="Save start times for a competition (in ical format) to webshooter.ical",
-        )
-        parser_ical.add_argument("competition", help="Competition ID", type=int, default=None)
-
-        parser_results = subparsers.add_parser(
-            "results",
-            help="List results from a competition",
-        )
-        parser_results.add_argument("competition", help="Competition ID", type=int, default=None)
+        # can specify a particular competion
 
         parser_signups = subparsers.add_parser(
             "signups",
             help="List signups for a competition",
         )
         parser_signups.add_argument("competition", help="Competition ID", type=int, default=None)
+        self.add_card_and_club(parser_signups)
 
+        parser_starttimes = subparsers.add_parser(
+            "starttimes",
+            help="List start times for a competition",
+        )
+        parser_starttimes.add_argument("competition", help="Competition ID", type=int, default=None)
+        self.add_card_and_club(parser_starttimes)
+
+        parser_ical = subparsers.add_parser(
+            "ical",
+            help="Save start times for a competition to an iCal file",
+        )
+        parser_ical.add_argument("competition", help="Competition ID", type=int, default=None)
+        self.add_card_and_club(parser_ical)
+
+        parser_results = subparsers.add_parser(
+            "results",
+            help="List results from a competition",
+        )
+        parser_results.add_argument("competition", help="Competition ID", type=int, default=None)
+        self.add_card_and_club(parser_results)
+
+        # summaries
         parser_medals = subparsers.add_parser(
             "medals",
             help="List standard medals awarded for a card",
         )
         parser_medals.add_argument("year", nargs="?", help="Optional year", type=int)
+        self.add_card_and_club(parser_medals)
 
         parser_starts = subparsers.add_parser(
             "starts",
             help="List total starts from a club",
         )
         parser_starts.add_argument("year", nargs="?", help="Optional year", type=int)
+        self.add_card_and_club(parser_starts)
 
         parser_competitions = subparsers.add_parser(
             "competitions",
@@ -93,14 +100,15 @@ class Command:
         )
         parser_competitions.add_argument("year", nargs="?", help="Optional year", type=int)
 
-        parser_competitions = subparsers.add_parser(
-            "ui",
-            help="Run UI",
-        )
-
         args = self.__parser.parse_args()
 
         return args
+
+    @staticmethod
+    def add_card_and_club(parser: configargparse.ArgumentParser):
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument("--club", help="Club number, e.g. 12-239, use 'None' to unset")
+        group.add_argument("--card", help="Pistolskyttekort number, e.g. 12345, use 'None' to unset")
 
     def print_help(self):
         self.__parser.print_help(sys.stderr)
@@ -111,65 +119,46 @@ def main():
 
     args = command.get_arguments()
 
+    ApplicationConfig(token=args.token, unicode=args.unicode, verbose=args.verbose)
+
     # Unset card/club if user passed --card=None or --card ""
-    for key in ("club", "card"):
-        val = getattr(args, key, None)
-        if isinstance(val, str) and (val.strip().lower() == "none" or val.strip() == ""):
-            setattr(args, key, None)
+    # specifically for club
+    val = getattr(args, "club", None)
+    if isinstance(val, str) and (val.strip().lower() == "none" or val.strip() == ""):
+        setattr(args, "club", None)
 
-    # # Unset any argument if user passed --arg=None or --arg ""
-    # for key, val in vars(args).items():
-    #     if isinstance(val, str) and (val.strip().lower() == "none" or val.strip() == ""):
-    #         setattr(args, key, None)
+    # specifically for card
+    val = getattr(args, "card", None)
+    if not isinstance(val, str) and not args.club:
+        setattr(args, "card", api_calls.get_authenticated_shooting_card_number())
+    elif isinstance(val, str) and (val.strip().lower() == "none" or val.strip() == ""):
+        setattr(args, "card", None)
 
-    ApplicationConfig(token=args.token, club=args.club, card=args.card, unicode=args.unicode, verbose=args.verbose)
-
-    if args.command == "ui":
-        args_for_gui = WebShooterGUI.run(ApplicationConfig())
-        if args_for_gui is None:
-            sys.exit(1)
-        args = configargparse.Namespace(**args_for_gui)
-
-    exit_code: int = 0
-
-    info = None
-    result = None
-
+    # can specify a particular competion
     if args.command == "signups":
-        info = get_info(competition=args.competition)
-        result = SignupsCommand.get_signups(competition=args.competition, club=args.club, card=args.card)
+        SignupsCommand.get_signups(competition_id=args.competition, club=args.club, card=args.card)
     elif args.command == "starttimes":
-        info = get_info(competition=args.competition)
-        result = StartTimesCommand.get_starttimes(
-            info=info, competition=args.competition, club=args.club, card=args.card
-        )
+        StartTimesCommand.get_starttimes(competition_id=args.competition, club=args.club, card=args.card)
     elif args.command == "ical":
-        info = get_info(competition=args.competition)
-        result = StartTimesCommand.get_starttimes(
-            info=info, competition=args.competition, club=args.club, card=args.card, ical=True
-        )
+        ICalExportCommand().export_starttimes(competition_id=args.competition, club=args.club, card=args.card)
     elif args.command == "results":
-        info = get_info(competition=args.competition)
-        result = ResultsCommand.get_results(
-            competition=args.competition, club=args.club, card=args.card, info_type=info["type"]
-        )
+        ResultsCommand.get_results_for_competition(competition_id=args.competition, club=args.club, card=args.card)
+
+    # summaries
     elif args.command == "medals":
-        result = MedalsCommand.get_medals(club=args.club, card=args.card, year=args.year)
+        MedalsCommand.get_medals(club=args.club, card=args.card, year=args.year)
     elif args.command == "starts":
-        result = StartsCommand.get_starts_total(club=args.club, card=args.card, year=args.year)
+        StartsCommand.get_starts_total(club=args.club, card=args.card, year=args.year)
+
     elif args.command == "competitions":
-        result = CompetitionsListCommand.get_competitions(year=args.year)
+        CompetitionsCommand.get_competitions(year=args.year)
     elif args.command == "exit":
         sys.exit(1)
     else:
         command.print_help()
         sys.exit(1)
 
-    print("")
-    print_info(club=args.club, info=info)
-    print_result(result=result)
-
-    sys.exit(exit_code)
+    sys.exit(0)
 
 
 if __name__ == "__main__":

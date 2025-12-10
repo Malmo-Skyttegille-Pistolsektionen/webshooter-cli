@@ -1,164 +1,88 @@
-from dataclasses import dataclass
-import math
+from tabulate import tabulate
+import pandas as pd
 
-from webshooter_client.common.application_config import ApplicationConfig
-from webshooter_client.common.common import fetch_data
+from webshooter_client.api.api_calls import get_results, get_competition
+from webshooter_client.models.competition import Competition, CompetitionType
 
 
-@dataclass(kw_only=True)
 class ResultsCommand:
-    def get_results(competition, club, card, info_type):  # noqa: C901
-        result = {}
 
-        data = fetch_data(competition=competition, page="results")
+    @staticmethod
+    def get_results_for_competition(competition_id: int, club, card) -> None:  # noqa: C901
+        competition: Competition = get_competition(competition_id=competition_id)
+        results = get_results(competition_id=competition_id)
 
-        total_points = {}
-        std_medals = {}
-        total_series = 0
+        # output some info about the competition
+        print(f"Competition: {competition.name}")
+        print(f"Type: {competition.type.display_name}")
+        print(f"Date: {competition.competition_date.isoformat()}")
+        print(f"Location: {competition.venue}, {competition.city}")
+        print("")
 
-        for first_pass in [True, False]:
-            if not first_pass:
-                if ApplicationConfig().verbose:
-                    print("Poängmetoden Precision:")
-                if info_type == "precision" or info_type == "military":
-                    for key in total_points:
-                        if info_type == "precision":
-                            if key == "A":
-                                s = 46.1 * total_series
-                                b = 44.5 * total_series
-                            elif key == "B":
-                                s = 47.0 * total_series
-                                b = 45.5 * total_series
-                            elif key == "C":
-                                s = 47.1 * total_series
-                                b = 46.0 * total_series
-                            elif key in ("M1", "M2", "M3", "M4"):
-                                s = 282
-                                b = 274
-                            elif key == "M5":
-                                s = 294
-                                b = 288
-                            elif key in ("M6", "M7"):
-                                s = 270
-                                b = 253
-                            elif key == "M8":
-                                s = 999999
-                                b = 999998
-                            elif key == "M9":
-                                s = 999999
-                                b = 999998
-                            else:
-                                raise Exception(f"Unknown weapon group: {key}")
-                        if info_type == "military":
-                            if key == "A":
-                                s = 540
-                                b = 516
-                            elif key == "R":
-                                s = 552
-                                b = 528
-                            elif key == "B":
-                                s = 561
-                                b = 537
-                            elif key == "C":
-                                s = 564
-                                b = 540
-                            else:
-                                raise Exception(f"Unknown weapon group: {key}")
-                        s = math.ceil(s)
-                        b = math.ceil(b)
-                        if ApplicationConfig().verbose:
-                            print(f"{key} S: {s} B: {b}")
+        #  results for military and precision shall be presented using tabulate
 
-                        std_medals[key] = {}
-                        std_medals[key]["s"] = s
-                        std_medals[key]["b"] = b
+        if competition.type in [
+            CompetitionType.PRECISION,
+            CompetitionType.MILITARY,
+        ]:
+            table_data = []
+            for result in results:
+                signup = result.signup
 
-                    if ApplicationConfig().verbose:
-                        print("Beräkningsmetoden:")
-                    for key in total_points:
-                        total_points[key].sort(reverse=True)
-                        count = len(total_points[key])
-                        s = 999999
-                        b = 999998
-                        if count >= 9:
-                            s = math.floor(count / 9)
-                            s = total_points[key][s - 1]
-                        if count >= 3:
-                            b = math.floor(count / 3)
-                            b = total_points[key][b - 1]
-                        if ApplicationConfig().verbose:
-                            print(f"{key}({count}) S: {s} B: {b}")
+                if (club == signup.spsf_club_number and not card) or card == signup.shooting_card_number:
+                    table_data.append(
+                        [
+                            signup.shooting_card_number,
+                            signup.fullname,
+                            signup.weapon_class_general,
+                            signup.weapon_class,
+                            result.placement,
+                            result.std_medal.display_name if result.std_medal else "",
+                            result.points,
+                            sum(series.inner_tens for series in result.series),
+                            " ".join(str(series.points) for series in result.series),
+                        ]
+                    )
 
-                        std_medals[key]["s"] = min(std_medals[key]["s"], s)
-                        std_medals[key]["b"] = min(std_medals[key]["b"], b)
+            headers = ["Card", "Name", "Main Class", "Sub class", "Place", "Medal", "Points", "Xs", "Series"]
+            df = pd.DataFrame(data=table_data, columns=headers)
+            df_sorted = df.sort_values(by=["Main Class", "Place"], ascending=[True, True])
 
-                    if ApplicationConfig().verbose:
-                        print("Använda gränser:")
-                        for key in std_medals:
-                            print(f"{key} S: {std_medals[key]['s']} B: {std_medals[key]['b']}")
+            print(tabulate(df_sorted, headers=headers, tablefmt="simple"))
+        elif competition.type == CompetitionType.FIELD:
+            table_data = []
+            for result in results:
+                signup = result.signup
 
-            for results in data["results"]:
-                series = 0
-                firstname = results["signup"]["user"]["name"]
-                lastname = results["signup"]["user"]["lastname"]
-                su_card = results["signup"]["user"]["shooting_card_number"]
-                name = f"{firstname} {lastname}"
-                su_club = (
-                    str(results["signup"]["club"]["districts_id"]) + "-" + str(results["signup"]["club"]["clubs_nr"])
-                )
-                classname = results["weaponclass"]["classname"]
-                placement = results["placement"]
-                if placement > 0:
-                    group = results["weaponclass"]["classname_general"][0]
-                    if group != "C":
-                        group = results["weaponclass"]["classname_general"]
-                    if total_points.get(group) is None:
-                        total_points[group] = []
-                    total_points[group].append(results["points"])
-                if club == su_club and card is None or card == su_card:
-                    precision = results["figure_hits"] == 0 and results["points"] != 0
-                    points = results["points"] if precision else f"{results['hits']}/{results['figure_hits']}"
+                if (club == signup.spsf_club_number and not card) or card == signup.shooting_card_number:
+                    table_data.append(
+                        [
+                            signup.shooting_card_number,
+                            signup.fullname,
+                            signup.weapon_class_general,
+                            signup.weapon_class,
+                            result.placement,
+                            result.std_medal.display_name if result.std_medal else "",
+                            sum(r.hits for r in result.stations),
+                            sum(r.figure_hits for r in result.stations),
+                            result.points,
+                            " ".join(f"{r.hits}/{r.figure_hits}" for r in result.stations),
+                        ]
+                    )
 
-                    if not first_pass:
-                        line = f"{classname:<4} : {placement:>2} - {points:<6}"
-                        if ApplicationConfig().verbose or not precision:
-                            if placement > 0 and results["std_medal"] is not None:
-                                result[su_card]["medals"][results["std_medal"]] += 1
-                                line += f"({results['std_medal']}) "
-                            else:
-                                line += "    "
-                        if precision:
-                            if placement > 0 and points >= std_medals[group]["b"]:
-                                if points >= std_medals[group]["s"]:
-                                    result[su_card]["medals"]["S"] += 1
-                                    line += "(S)"
-                                else:
-                                    result[su_card]["medals"]["B"] += 1
-                                    line += "(B)"
-                            else:
-                                line += "   "
-                        line += " -"
-                        first = True
-                    for point in results["results"]:
-                        series += 1
-                        if not first_pass:
-                            if not first:
-                                line += ","
-                                first = False
+            headers = [
+                "Card",
+                "Name",
+                "Main Class",
+                "Sub class",
+                "Place",
+                "Medal",
+                "Hits",
+                "Figures",
+                "Points",
+                "Stations",
+            ]
+            df = pd.DataFrame(data=table_data, columns=headers)
+            df_sorted = df.sort_values(by=["Main Class", "Place"], ascending=[True, True])
 
-                            line += (
-                                f" {point['points']:>2}" if precision else f" {point['hits']}/{point['figure_hits']}"
-                            )
-
-                        if su_card not in result.keys():
-                            result[su_card] = {
-                                "name": name,
-                                "lines": [],
-                                "medals": {"B": 0, "S": 0},
-                            }
-                    if not first_pass:
-                        result[su_card]["lines"].append(line)
-                if series > total_series:
-                    total_series = series
-
-        return result
+            print(tabulate(df_sorted, headers=headers, tablefmt="simple"))
