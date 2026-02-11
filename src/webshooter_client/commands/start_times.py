@@ -7,7 +7,7 @@ from webshooter_client.models.patrol import Patrol
 
 class StartTimesCommand:
     """Command to display start times for a competition."""
-    
+
     @staticmethod
     def get_starttimes(competition_id: int, club: str, card: Optional[str]) -> None:
 

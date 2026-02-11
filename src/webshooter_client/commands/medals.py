@@ -1,4 +1,4 @@
-from typing import Optional, TextIO
+from typing import Optional
 from webshooter_client.api.api_calls import get_competitions, get_results
 from webshooter_client.models.competition import Competition, CompetitionType
 from tabulate import tabulate
@@ -7,7 +7,7 @@ from webshooter_client.models.result import StdMedal
 
 class MedalsCommand:
     """Command to calculate medal statistics for shooters."""
-    
+
     @staticmethod
     def get_medals(club: str, card: Optional[str], year: int) -> None:
 

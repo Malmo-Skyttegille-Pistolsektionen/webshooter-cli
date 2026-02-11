@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, TextIO
 from datetime import datetime, timezone
 from webshooter_client.api.api_calls import get_patrols, get_competition
 from webshooter_client.models.competition import Competition, CompetitionType
@@ -7,7 +7,7 @@ from webshooter_client.models.patrol import Patrol
 
 class ICalExportCommand:
     """Command to export start times to iCal format."""
-    
+
     @staticmethod
     def export_starttimes(competition_id: int, club: str, card: Optional[str]) -> None:
 

@@ -44,10 +44,10 @@ BASE_URL_COMPETITION_PAGE = "https://webshooter.se/api/v4.1.9/competitions/{comp
 def get_competition(competition_id: int) -> Competition:
     """
     Fetch a single competition by its ID from the WebShooter API.
-    
+
     Args:
         competition_id: The unique identifier for the competition
-        
+
     Returns:
         Competition object with details about the competition
     """
@@ -74,10 +74,10 @@ def get_competition(competition_id: int) -> Competition:
 def get_competitions(year: Optional[int]) -> dict[int, Competition]:
     """
     Fetch all competitions, optionally filtered by year.
-    
+
     Args:
         year: Optional year to filter competitions (e.g., 2024)
-        
+
     Returns:
         Dictionary mapping competition IDs to Competition objects
     """
@@ -108,10 +108,10 @@ def get_competitions(year: Optional[int]) -> dict[int, Competition]:
 def get_patrols(competition_id: int) -> List[Patrol]:
     """
     Fetch all patrols for a specific competition.
-    
+
     Args:
         competition_id: The unique identifier for the competition
-        
+
     Returns:
         List of Patrol objects with start times and participant signups
     """
@@ -146,10 +146,10 @@ def get_patrols(competition_id: int) -> List[Patrol]:
 def get_results(competition_id: int) -> List[PrecisionResult | MilitaryResult | FieldResult]:
     """
     Fetch all results for a specific competition.
-    
+
     Args:
         competition_id: The unique identifier for the competition
-        
+
     Returns:
         List of result objects (type depends on competition type: Precision, Military, or Field)
     """
@@ -195,10 +195,10 @@ def get_results(competition_id: int) -> List[PrecisionResult | MilitaryResult | 
 def get_signups(competition_id: int) -> List[Signup]:
     """
     Fetch all signups for a specific competition.
-    
+
     Args:
         competition_id: The unique identifier for the competition
-        
+
     Returns:
         List of Signup objects representing all participants registered for the competition
     """
@@ -220,18 +220,18 @@ def get_signups(competition_id: int) -> List[Signup]:
 def fetch_data(url: str, max_retries: int = 5, backoff_factor: int = 10) -> Dict[str, Any]:
     """
     Fetch JSON data from the WebShooter API with retry logic.
-    
+
     Automatically adds authentication headers and retries on HTTP 500 errors
     with exponential backoff.
-    
+
     Args:
         url: The API endpoint URL to fetch
         max_retries: Maximum number of retry attempts on HTTP 500 (default: 5)
         backoff_factor: Seconds to multiply by retry count for backoff (default: 10)
-        
+
     Returns:
         Parsed JSON response as dictionary
-        
+
     Raises:
         requests.exceptions.RequestException: On network or request errors
         Exception: If max retries exceeded
