@@ -7,6 +7,7 @@ from tabulate import tabulate
 
 
 class SignupsCommand:
+    """Command to display signups for a competition."""
 
     @staticmethod
     def get_signups(competition_id: int, club: str, card: int) -> None:  # noqa: C901

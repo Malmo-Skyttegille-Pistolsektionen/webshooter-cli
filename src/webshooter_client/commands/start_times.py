@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from tabulate import tabulate
 from webshooter_client.api.api_calls import get_patrols, get_competition
 from webshooter_client.models.competition import Competition
@@ -6,8 +6,10 @@ from webshooter_client.models.patrol import Patrol
 
 
 class StartTimesCommand:
+    """Command to display start times for a competition."""
+    
     @staticmethod
-    def get_starttimes(competition_id, club, card) -> None:
+    def get_starttimes(competition_id: int, club: str, card: Optional[str]) -> None:
 
         competition: Competition = get_competition(competition_id=competition_id)
 

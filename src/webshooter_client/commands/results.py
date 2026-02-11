@@ -1,3 +1,4 @@
+from typing import Optional
 from tabulate import tabulate
 import pandas as pd
 
@@ -6,9 +7,10 @@ from webshooter_client.models.competition import Competition, CompetitionType
 
 
 class ResultsCommand:
+    """Command to display competition results."""
 
     @staticmethod
-    def get_results_for_competition(competition_id: int, club, card) -> None:  # noqa: C901
+    def get_results_for_competition(competition_id: int, club: str, card: Optional[str]) -> None:  # noqa: C901
         competition: Competition = get_competition(competition_id=competition_id)
         results = get_results(competition_id=competition_id)
 

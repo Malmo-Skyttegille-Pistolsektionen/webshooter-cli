@@ -1,3 +1,4 @@
+from typing import Optional, TextIO
 from webshooter_client.api.api_calls import get_competitions, get_results
 from webshooter_client.models.competition import Competition, CompetitionType
 from tabulate import tabulate
@@ -5,14 +6,18 @@ from webshooter_client.models.result import StdMedal
 
 
 class MedalsCommand:
-    def get_medals(club, card, year: int) -> None:
+    """Command to calculate medal statistics for shooters."""
+    
+    @staticmethod
+    def get_medals(club: str, card: Optional[str], year: int) -> None:
 
         shooter_medals: dict[int, dict[CompetitionType, dict[StdMedal, int]]] = {}
 
         competitions: dict[int, Competition] = get_competitions(year=year)
 
         for competition in competitions.values():
-            if competition.id == 53:  # skip the test competition
+            # Skip competition 53 - it's a test competition in the webshooter.se system
+            if competition.id == 53:
                 continue
 
             results = get_results(competition_id=competition.id)

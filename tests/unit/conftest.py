@@ -49,7 +49,7 @@ def resource_testfile_rootdir_w_path(request, _resource_testfile_rootdir) -> str
 
 
 def fetch_data_X(competition, page) -> Dict[str, Any]:
-    print("here")
+    pass
 
 
 def fetch_data_side_effect(
@@ -65,7 +65,6 @@ def fetch_data_side_effect(
         )
 
     with open(filename) as f:
-        print(f"Reading file {filename}")
         output = f.read()
 
     return json.loads(output)

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone
 from webshooter_client.api.api_calls import get_patrols, get_competition
 from webshooter_client.models.competition import Competition, CompetitionType
@@ -6,41 +6,41 @@ from webshooter_client.models.patrol import Patrol
 
 
 class ICalExportCommand:
+    """Command to export start times to iCal format."""
+    
     @staticmethod
-    def export_starttimes(competition_id, club, card) -> None:
+    def export_starttimes(competition_id: int, club: str, card: Optional[str]) -> None:
 
         patrols: List[Patrol] = get_patrols(competition_id=competition_id)
         filename: str = f"webshooter_{competition_id}.ical"
 
-        file = open(filename, "w")
+        with open(filename, "w") as file:
+            ICalExportCommand.write_ical_header(file)
 
-        ICalExportCommand.write_ical_header(file)
+            competition: Competition = get_competition(competition_id=competition_id)
 
-        competition: Competition = get_competition(competition_id=competition_id)
+            for patrol in patrols:
+                for signup in patrol.signups:
+                    if club == signup.spsf_club_number and card is None or card == signup.shooting_card_number:
 
-        for patrol in patrols:
-            for signup in patrol.signups:
-                if club == signup.spsf_club_number and card is None or card == signup.shooting_card_number:
+                        ICalExportCommand.write_ical_event(
+                            file=file,
+                            competition=competition,
+                            signup_id=signup.id,
+                            patrol_number=patrol.number,
+                            start_time=patrol.start_time,
+                            end_time=patrol.end_time,
+                            weapon_group=signup.weapon_class,
+                            lane=signup.lane,
+                        )
 
-                    ICalExportCommand.write_ical_event(
-                        file=file,
-                        competition=competition,
-                        signup_id=signup.id,
-                        patrol_number=patrol.number,
-                        start_time=patrol.start_time,
-                        end_time=patrol.end_time,
-                        weapon_group=signup.weapon_class,
-                        lane=signup.lane,
-                    )
-
-        ICalExportCommand.write_ical_footer(file)
-        file.close()
+            ICalExportCommand.write_ical_footer(file)
 
         print(f"Start times written to {filename}")
 
     @staticmethod
     def write_ical_event(
-        file,
+        file: TextIO,
         competition: Competition,
         signup_id: int,
         patrol_number: int,
@@ -73,7 +73,7 @@ class ICalExportCommand:
         file.write("END:VEVENT\n")
 
     @staticmethod
-    def write_ical_header(file):
+    def write_ical_header(file: TextIO) -> None:
         file.write("BEGIN:VCALENDAR\n")
         file.write("VERSION:2.0\n")
         file.write("PRODID:-//Webshooter//Pistol//SV\n")
@@ -100,5 +100,5 @@ class ICalExportCommand:
         file.write("END:VTIMEZONE\n")
 
     @staticmethod
-    def write_ical_footer(file):
+    def write_ical_footer(file: TextIO) -> None:
         file.write("END:VCALENDAR\n")

@@ -9,9 +9,10 @@ import logging
 
 
 class StartsCommand:
+    """Command to calculate total starts across competitions."""
 
     @staticmethod
-    def get_starts_total(club, card, year: Optional[int] = None) -> None:
+    def get_starts_total(club: str, card: Optional[str], year: Optional[int] = None) -> None:
         counters = {comp_type: 0 for comp_type in CompetitionType}
 
         competitions: dict[int, Competition] = api_calls.get_competitions(year=year)
