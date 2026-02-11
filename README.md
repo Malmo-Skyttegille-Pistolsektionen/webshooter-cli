@@ -27,10 +27,10 @@ e.g. `pip install dist/webshooter_client-0.1.dev27-py3-none-any.whl`
 ## Linting and Testing
 
 ```bash
-hatch run lint:black src tests 
-hatch run lint:flake8
+hatch run dev:black src tests 
+hatch run dev:flake8
 
-hatch run test:pytest tests
+hatch run dev:pytest tests
 ```
 
 ### webshooter.rc config file

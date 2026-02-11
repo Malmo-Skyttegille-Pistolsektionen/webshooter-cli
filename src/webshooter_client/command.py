@@ -114,47 +114,53 @@ class Command:
         self.__parser.print_help(sys.stderr)
 
 
-def main():
-    command = Command()
-
-    args = command.get_arguments()
-
-    ApplicationConfig(token=args.token, unicode=args.unicode, verbose=args.verbose)
-
-    # Unset card/club if user passed --card=None or --card ""
-    # specifically for club
+def _normalize_card_club_args(args):
+    """Normalize card and club arguments, handling None values and defaults."""
+    # Unset club if user passed --club=None or --club ""
     val = getattr(args, "club", None)
     if isinstance(val, str) and (val.strip().lower() == "none" or val.strip() == ""):
         setattr(args, "club", None)
 
-    # specifically for card
+    # Handle card: fetch authenticated card if not specified, or unset if "none"
     val = getattr(args, "card", None)
     if not isinstance(val, str) and not args.club:
         setattr(args, "card", api_calls.get_authenticated_shooting_card_number())
     elif isinstance(val, str) and (val.strip().lower() == "none" or val.strip() == ""):
         setattr(args, "card", None)
 
-    # can specify a particular competion
-    if args.command == "signups":
+
+def _execute_command(command, args):
+    """Execute the appropriate command based on args."""
+    if command == "signups":
         SignupsCommand.get_signups(competition_id=args.competition, club=args.club, card=args.card)
-    elif args.command == "starttimes":
+    elif command == "starttimes":
         StartTimesCommand.get_starttimes(competition_id=args.competition, club=args.club, card=args.card)
-    elif args.command == "ical":
+    elif command == "ical":
         ICalExportCommand().export_starttimes(competition_id=args.competition, club=args.club, card=args.card)
-    elif args.command == "results":
+    elif command == "results":
         ResultsCommand.get_results_for_competition(competition_id=args.competition, club=args.club, card=args.card)
-
-    # summaries
-    elif args.command == "medals":
+    elif command == "medals":
         MedalsCommand.get_medals(club=args.club, card=args.card, year=args.year)
-    elif args.command == "starts":
+    elif command == "starts":
         StartsCommand.get_starts_total(club=args.club, card=args.card, year=args.year)
-
-    elif args.command == "competitions":
+    elif command == "competitions":
         CompetitionsCommand.get_competitions(year=args.year)
-    elif args.command == "exit":
+    elif command == "exit":
         sys.exit(1)
     else:
+        return False
+    return True
+
+
+def main():
+    command = Command()
+    args = command.get_arguments()
+
+    ApplicationConfig(token=args.token, unicode=args.unicode, verbose=args.verbose)
+
+    _normalize_card_club_args(args)
+
+    if not _execute_command(args.command, args):
         command.print_help()
         sys.exit(1)
 
