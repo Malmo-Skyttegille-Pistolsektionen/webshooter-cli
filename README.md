@@ -57,7 +57,7 @@ wscli --help
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.13+
 - [Hatch](https://hatch.pypa.io/)
 
 ### Build

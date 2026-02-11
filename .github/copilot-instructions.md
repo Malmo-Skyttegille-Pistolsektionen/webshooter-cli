@@ -45,7 +45,7 @@ hatch run lint:flake8
 
 **Code style:**
 - Line length: 120 (Black), 125 (flake8)
-- Target: Python 3.10+
+- Target: Python 3.13+
 - Flake8 ignores W503 (line break before binary operator)
 
 ## Architecture

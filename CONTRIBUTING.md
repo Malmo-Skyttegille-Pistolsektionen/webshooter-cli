@@ -6,7 +6,7 @@ Thank you for your interest in contributing to Webshooter Client! This document 
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.13+
 - [Hatch](https://hatch.pypa.io/) for environment management
 - Git
 
@@ -105,7 +105,7 @@ hatch run dev:pytest tests/unit/webshooter_client/commands/test_competition_list
 ### Code Style Guidelines
 
 - **Line length:** 120 characters (Black), 125 (flake8)
-- **Target:** Python 3.10+
+- **Target:** Python 3.13+
 - **Type hints:** Use type hints for function signatures
 - **Docstrings:** Add docstrings for public modules, classes, and functions
 - **Comments:** Only comment complex logic that needs clarification
@@ -252,7 +252,7 @@ This project uses **dynamic versioning** based on git tags and **GitHub releases
 
 4. **GitHub Actions will automatically:**
    - Run linting (Black, flake8)
-   - Run all tests on Python 3.10-3.13
+   - Run all tests on Python 3.13
    - Build the wheel package
    - Upload the wheel to the GitHub release
 
