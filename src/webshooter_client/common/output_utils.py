@@ -22,12 +22,19 @@ def matches_club_and_card(signup: Signup, club: str, card: str = None) -> bool:
 
     Args:
         signup: Signup object to check
-        club: Club number to filter by
+        club: Club number to filter by (can be None if only card is specified)
         card: Optional card number to filter by. If None, all club members match.
 
     Returns:
         True if signup matches the filters, False otherwise
     """
-    if club != signup.spsf_club_number:
-        return False
-    return card is None or card == signup.shooting_card_number
+    # If card is provided, only match that specific card (ignore club)
+    if card:
+        return card == signup.shooting_card_number
+    
+    # If only club is provided, match all members of that club
+    if club:
+        return club == signup.spsf_club_number
+    
+    # If neither is provided, match nothing
+    return False
