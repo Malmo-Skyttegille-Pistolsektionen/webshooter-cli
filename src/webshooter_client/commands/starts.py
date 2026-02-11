@@ -22,9 +22,10 @@ class StartsCommand:
 
             results = ResultsCommand.get_results_for_competition(competition_id=competition.id, club=club, card=card)
 
-            for card in results.keys():
-                if card != 0:
-                    counters[competition.type] += len(results[card]["lines"])
+            if results:
+                for card in results.keys():
+                    if card != 0:
+                        counters[competition.type] += len(results[card]["lines"])
 
         # Prepare data for tabulate
         table_data = []

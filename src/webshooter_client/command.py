@@ -123,7 +123,8 @@ def _normalize_card_club_args(args):
 
     # Handle card: fetch authenticated card if not specified, or unset if "none"
     val = getattr(args, "card", None)
-    if not isinstance(val, str) and not args.club:
+    club = getattr(args, "club", None)
+    if not isinstance(val, str) and not club:
         setattr(args, "card", api_calls.get_authenticated_shooting_card_number())
     elif isinstance(val, str) and (val.strip().lower() == "none" or val.strip() == ""):
         setattr(args, "card", None)
