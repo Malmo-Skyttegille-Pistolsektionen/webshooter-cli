@@ -5,9 +5,10 @@ import pandas as pd
 from webshooter_client.api.api_calls import get_results, get_competition
 from webshooter_client.models.competition import Competition, CompetitionType
 from webshooter_client.common.output_utils import print_competition_header, matches_club_and_card
+from webshooter_client.commands.base_command import BaseCommand
 
 
-class ResultsCommand:
+class ResultsCommand(BaseCommand):
     """Command to display competition results."""
 
     @staticmethod

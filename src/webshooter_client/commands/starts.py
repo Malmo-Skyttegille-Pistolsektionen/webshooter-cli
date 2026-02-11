@@ -1,14 +1,13 @@
 from typing import Optional
 
-from tabulate import tabulate
-
 from webshooter_client.commands.results import ResultsCommand
 from webshooter_client.api import api_calls
 from webshooter_client.models.competition import Competition, CompetitionType
+from webshooter_client.commands.base_command import BaseCommand
 import logging
 
 
-class StartsCommand:
+class StartsCommand(BaseCommand):
     """Command to calculate total starts across competitions."""
 
     @staticmethod
@@ -40,6 +39,6 @@ class StartsCommand:
         table_data.append(["", ""])
         table_data.append(["Total starts", sum([counters[type] for type in counters.keys()])])
 
-        print(tabulate(table_data, tablefmt="simple"))
+        BaseCommand.print_table(table_data, headers=[])
 
         return

@@ -1,12 +1,12 @@
 from typing import List, Optional
-from tabulate import tabulate
 from webshooter_client.api.api_calls import get_patrols, get_competition
 from webshooter_client.models.competition import Competition
 from webshooter_client.models.patrol import Patrol
 from webshooter_client.common.output_utils import print_competition_header, matches_club_and_card
+from webshooter_client.commands.base_command import BaseCommand
 
 
-class StartTimesCommand:
+class StartTimesCommand(BaseCommand):
     """Command to display start times for a competition."""
 
     @staticmethod
@@ -42,5 +42,4 @@ class StartTimesCommand:
                     )
 
         headers = ["Card", "Name", "Class", "Start", "End", "Patrol", "Lane", "Team Mates"]
-
-        print(tabulate(table_data, headers=headers, tablefmt="simple"))
+        BaseCommand.print_table(table_data, headers)

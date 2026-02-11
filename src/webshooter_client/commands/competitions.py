@@ -1,12 +1,11 @@
 from typing import Optional
 
-from tabulate import tabulate
-
 from webshooter_client.api import api_calls
 from webshooter_client.models.competition import Competition
+from webshooter_client.commands.base_command import BaseCommand
 
 
-class CompetitionsCommand:
+class CompetitionsCommand(BaseCommand):
 
     @staticmethod
     def get_competitions(year: Optional[int]) -> None:
@@ -16,16 +15,5 @@ class CompetitionsCommand:
             for comp_id, comp in competitions.items()
         ]
 
-        print(
-            tabulate(
-                table_data,
-                headers=[
-                    "Date",
-                    "Type",
-                    "ID",
-                    "Name",
-                ],
-                tablefmt="simple",
-            )
-        )
+        BaseCommand.print_table(table_data, headers=["Date", "Type", "ID", "Name"])
         print(f"\nTotal: {len(competitions)}")

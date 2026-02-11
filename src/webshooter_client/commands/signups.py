@@ -4,10 +4,10 @@ from webshooter_client.api.api_calls import get_competition, get_signups
 from webshooter_client.models.competition import Competition
 from webshooter_client.models.signup import Signup
 from webshooter_client.common.output_utils import print_competition_header, matches_club_and_card
-from tabulate import tabulate
+from webshooter_client.commands.base_command import BaseCommand
 
 
-class SignupsCommand:
+class SignupsCommand(BaseCommand):
     """Command to display signups for a competition."""
 
     @staticmethod
@@ -61,9 +61,9 @@ class SignupsCommand:
             table_data.append([signup_data["card"], signup_data["name"], classes_str, patrol_mates_str])
 
         headers = ["Card", "Name", "Classes", "Patrol Mates"]
-        print(tabulate(table_data, headers=headers, tablefmt="simple"))
+        BaseCommand.print_table(table_data, headers)
 
-        print("\n\n")
+        BaseCommand.print_section_separator()
 
         # Create table for signups per weapon class
         signups_stats_table_data = []
@@ -84,4 +84,4 @@ class SignupsCommand:
         signups_stats_table_data.append(["Total", total_club, total_all])
 
         stats_headers = ["Weapon Class", f"Club {club}", "All"]
-        print(tabulate(signups_stats_table_data, headers=stats_headers, tablefmt="simple"))
+        BaseCommand.print_table(signups_stats_table_data, stats_headers)

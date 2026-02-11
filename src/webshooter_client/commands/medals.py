@@ -1,12 +1,12 @@
 from typing import Optional
 from webshooter_client.api.api_calls import get_competitions, get_results
 from webshooter_client.models.competition import Competition, CompetitionType
-from tabulate import tabulate
 from webshooter_client.models.result import StdMedal
 from webshooter_client.common.output_utils import matches_club_and_card
+from webshooter_client.commands.base_command import BaseCommand
 
 
-class MedalsCommand:
+class MedalsCommand(BaseCommand):
     """Command to calculate medal statistics for shooters."""
 
     @staticmethod
@@ -51,4 +51,4 @@ class MedalsCommand:
         print(f"Medals for year {year}" if year else "")
 
         headers = ["Card Number", "Name", "Type", "Silver", "Bronze"]
-        print(tabulate(table_data, headers=headers, tablefmt="simple"))
+        BaseCommand.print_table(table_data, headers)
