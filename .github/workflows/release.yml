@@ -1,14 +1,12 @@
-name: CI
+name: Release
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
+  release:
+    types: [published]
+
+permissions:
+  contents: write
 
 jobs:
   lint:
@@ -17,6 +15,8 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
     
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -33,44 +33,34 @@ jobs:
       run: hatch run dev:flake8
 
   test:
-    name: Test on Python ${{ matrix.python-version }}
-    needs: lint
+    name: Test before release
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-
+    
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Full history for hatch-vcs
+        fetch-depth: 0
     
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.10"
     
     - name: Install Hatch
       run: pip install hatch
     
     - name: Run tests
       run: hatch run dev:pytest tests -v --cov=src/webshooter_client --cov-report=term-missing
-    
-    - name: Upload coverage reports
-      if: matrix.python-version == '3.10'
-      uses: codecov/codecov-action@v4
-      continue-on-error: true
-  
+
   build:
     name: Build package
-    needs: test
+    needs: [lint, test]
     runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Full history for hatch-vcs
+        fetch-depth: 0  # Full history for hatch-vcs to determine version
     
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -83,15 +73,29 @@ jobs:
     - name: Build package
       run: hatch build
     
-    - name: Test installation from wheel
-      run: |
-        WHL_FILE=$(ls dist/*.whl)
-        pip install $WHL_FILE
-        wscli --help
-    
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: dist
         path: dist/
+
+  upload-release-assets:
+    name: Upload release assets
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist
+        path: dist
+    
+    - name: Upload wheel to release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: dist/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

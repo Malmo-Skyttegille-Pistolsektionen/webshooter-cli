@@ -224,6 +224,83 @@ Each type has different result structures reflected in the models.
 
 The client currently supports webshooter.se API **v4.1.9**. If the API version changes, update `BASE_URL_*` constants in `api/api_calls.py`.
 
+## Release Process
+
+This project uses **dynamic versioning** based on git tags and **GitHub releases**.
+
+### Creating a Release
+
+1. **Ensure all changes are merged to main:**
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+
+2. **Create a git tag locally:**
+   ```bash
+   # Use semantic versioning: vMAJOR.MINOR.PATCH
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+
+3. **Create a GitHub Release:**
+   - Go to: https://github.com/frazz/webshooter/releases/new
+   - Choose the tag you just pushed (v0.1.0)
+   - Generate release notes (GitHub can auto-generate from PRs/commits)
+   - Add custom release notes if desired
+   - Click "Publish release"
+
+4. **GitHub Actions will automatically:**
+   - Run linting (Black, flake8)
+   - Run all tests on Python 3.10-3.13
+   - Build the wheel package
+   - Upload the wheel to the GitHub release
+
+### Version Numbering
+
+Follow [Semantic Versioning](https://semver.org/):
+
+- **MAJOR** version (v1.0.0, v2.0.0) - Incompatible API changes
+- **MINOR** version (v0.1.0, v0.2.0) - Add functionality (backwards compatible)
+- **PATCH** version (v0.1.1, v0.1.2) - Bug fixes (backwards compatible)
+
+### Dynamic Versioning
+
+The package uses `hatch-vcs` for dynamic versioning:
+- Version is determined from git tags automatically
+- No need to manually update version in `pyproject.toml`
+- Development versions include commit hash: `0.1.0.dev3+g5440c4b`
+- Build artifacts are named: `webshooter_client-0.1.0-py3-none-any.whl`
+
+### Installation from Release
+
+Users can download the wheel from GitHub releases:
+
+```bash
+# Download wheel from: https://github.com/frazz/webshooter/releases
+pip install webshooter_client-0.1.0-py3-none-any.whl
+```
+
+### Release Checklist
+
+Before creating a release:
+
+- [ ] All tests passing locally
+- [ ] All CI checks passing on main
+- [ ] Documentation updated
+- [ ] No uncommitted changes
+- [ ] On main/master branch
+- [ ] Version tag follows semantic versioning
+
+### Manual Release Trigger
+
+You can also manually trigger the release workflow:
+- Go to Actions → Release workflow
+- Click "Run workflow"
+- Select branch and run
+
+This is useful for re-running a failed release build.
+
 ## Getting Help
 
 - Open an issue for bugs or feature requests
