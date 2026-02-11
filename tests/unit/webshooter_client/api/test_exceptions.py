@@ -1,7 +1,5 @@
 """Tests for API exceptions."""
 
-import pytest
-
 from webshooter_client.api.exceptions import (
     WebShooterAPIError,
     APIConnectionError,

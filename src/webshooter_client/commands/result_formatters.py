@@ -2,7 +2,6 @@
 
 from abc import ABC, abstractmethod
 from typing import List, Any
-import pandas as pd
 from tabulate import tabulate
 
 from webshooter_client.models.result import ResultBase
@@ -53,9 +52,9 @@ class ResultFormatter(ABC):
             table_data: Table rows
             headers: Column headers
         """
-        df = pd.DataFrame(data=table_data, columns=headers)
-        df_sorted = df.sort_values(by=["Main Class", "Place"], ascending=[True, True])
-        print(tabulate(df_sorted, headers=headers, tablefmt="simple"))
+        # Sort by Main Class (index 2) and Place (index 4)
+        sorted_data = sorted(table_data, key=lambda row: (row[2], row[4]))
+        print(tabulate(sorted_data, headers=headers, tablefmt="simple"))
 
 
 class PrecisionMilitaryResultFormatter(ResultFormatter):
