@@ -481,6 +481,33 @@ If API version changes, update `BASE_URL_*` constants in `api/api_calls.py`. Con
 - **Dependencies:** Automated updates via Renovate
 - **No sensitive data:** Token not logged or displayed
 
+## Programmatic Usage
+
+While primarily a CLI tool, the components can be used programmatically:
+
+```python
+from webshooter_client.api.api_calls import get_competitions, get_results
+from webshooter_client.common.application_config import ApplicationConfig
+
+# Configure
+config = ApplicationConfig()
+config.token = "your-token-here"
+
+# Fetch data
+competitions = get_competitions(year=2026)
+results = get_results(competition_id=283)
+
+# Process
+for result in results:
+    print(f"{result.placement}. {result.signup.fullname} - {result.points}")
+```
+
+**Key modules:**
+- `api.api_calls` - API functions (get_competitions, get_results, get_signups, get_patrols)
+- `models.*` - Dataclasses (Competition, Result, Signup, Patrol)
+- `commands.result_formatters` - Strategy formatters for display
+- `api.exceptions` - Custom exception hierarchy
+
 ## Future Improvements
 
 Potential enhancements (not planned):

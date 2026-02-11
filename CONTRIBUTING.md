@@ -229,6 +229,7 @@ The client currently supports webshooter.se API **v4.1.9**. If the API version c
 - Open an issue for bugs or feature requests
 - Check existing documentation in the codebase
 - Review test files for usage examples
+- See [ARCHITECTURE.md](ARCHITECTURE.md) for programmatic usage
 
 ## License
 

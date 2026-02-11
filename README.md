@@ -51,8 +51,7 @@ wscli --help
 ## Documentation
 
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development setup, testing, and contribution guidelines
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, design patterns, and design decisions
-- **[API.md](API.md)** - Programmatic API usage with examples
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, design patterns, and programmatic usage
 
 ## Development
 
@@ -155,5 +154,4 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 ## Support
 
 - **Issues:** https://github.com/frazz/webshooter/issues
-- **Documentation:** See docs linked above
-- **API Documentation:** [API.md](API.md)
+- **Documentation:** See [CONTRIBUTING.md](CONTRIBUTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md)
