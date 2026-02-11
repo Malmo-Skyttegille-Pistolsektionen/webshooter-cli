@@ -12,13 +12,16 @@ from webshooter_client.models.result import (
     PrecisionResult,
     MilitaryResult,
     FieldResult,
-    SeriesResult,
-    StationResult,
-    ResultBase,
-    StdMedal,
 )
 from webshooter_client.models.patrol import Patrol
 from webshooter_client.models.signup import Signup
+from webshooter_client.api.exceptions import (
+    APIConnectionError,
+    APITimeoutError,
+    APIServerError,
+    APIClientError,
+    APIRetryExhaustedError,
+)
 
 from datetime import datetime, date
 
@@ -153,41 +156,22 @@ def get_results(competition_id: int) -> List[PrecisionResult | MilitaryResult | 
     Returns:
         List of result objects (type depends on competition type: Precision, Military, or Field)
     """
+    from webshooter_client.api.result_parsers import ResultParserFactory
+
     logging.info(f"Fetching competition results for {competition_id}")
     url = BASE_URL_COMPETITION_PAGE.format(competition=competition_id, page="results")
 
     competition = get_competition(competition_id)
-
     data = fetch_data(url=url)
+
+    # Get appropriate parser for this competition type
+    parser = ResultParserFactory.get_parser(competition.type)
 
     results: List[PrecisionResult | MilitaryResult | FieldResult] = []
     for result in data.get("results", []):
         result["signup"]["weaponclass"] = result["weaponclass"]
         signup_obj: Signup = create_signup_obj(result["signup"])
-        base_kwargs = {
-            "signup": signup_obj,
-            "placement": int(result["placement"]),
-            "std_medal": StdMedal(result["std_medal"]) if result.get("std_medal") else None,
-            "points": int(result.get("points", -1)),
-        }
-
-        if base_kwargs["points"] == -1:
-            logging.warning(f"Result for {base_kwargs['fullname']} has invalid points value: -1")
-
-        if competition.type == CompetitionType.PRECISION:
-            series = [SeriesResult(points=s["points"], inner_tens=s.get("hits")) for s in result.get("results", [])]
-            results.append(PrecisionResult(**base_kwargs, series=series))
-        elif competition.type == CompetitionType.MILITARY:
-            series = [SeriesResult(points=s["points"], inner_tens=s.get("hits")) for s in result.get("results", [])]
-            results.append(MilitaryResult(**base_kwargs, series=series))
-        elif competition.type == CompetitionType.FIELD:
-            stations = [
-                StationResult(hits=st.get("hits", 0), figure_hits=st.get("figure_hits"), points=st.get("points"))
-                for st in result.get("results", [])
-            ]
-            results.append(FieldResult(**base_kwargs, stations=stations))
-        else:
-            results.append(ResultBase(**base_kwargs))
+        results.append(parser.parse(result, signup_obj))
 
     return results
 
@@ -233,8 +217,11 @@ def fetch_data(url: str, max_retries: int = 5, backoff_factor: int = 10) -> Dict
         Parsed JSON response as dictionary
 
     Raises:
-        requests.exceptions.RequestException: On network or request errors
-        Exception: If max retries exceeded
+        APIConnectionError: On network connection errors
+        APITimeoutError: On request timeout
+        APIServerError: On HTTP 5xx errors after retries
+        APIClientError: On HTTP 4xx errors
+        APIRetryExhaustedError: If max retries exceeded
     """
     headers = HEADERS.copy()
     headers["Authorization"] = f"Bearer {ApplicationConfig().token}"
@@ -242,9 +229,11 @@ def fetch_data(url: str, max_retries: int = 5, backoff_factor: int = 10) -> Dict
     logging.info(f"Fetching from: {url}")
 
     retries = 0
+    last_error = None
+
     while retries < max_retries:
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=30)
 
             # Handle HTTP response codes explicitly
             if response.status_code == 200:
@@ -252,16 +241,42 @@ def fetch_data(url: str, max_retries: int = 5, backoff_factor: int = 10) -> Dict
             elif response.status_code == 500:
                 retries += 1
                 wait_time = backoff_factor * retries
-                print(f"HTTP 500 Error. Retrying {retries}/{max_retries} in {wait_time} seconds...")
+                logging.warning(
+                    f"HTTP 500 Error from {url}. Retry {retries}/{max_retries} in {wait_time}s..."
+                )
                 time.sleep(wait_time)
+                last_error = APIServerError(
+                    "Server returned HTTP 500",
+                    url=url,
+                    status_code=500
+                )
+            elif 400 <= response.status_code < 500:
+                raise APIClientError(
+                    f"Client error: {response.status_code} - {response.text}",
+                    url=url,
+                    status_code=response.status_code
+                )
             else:
-                print(f"Unexpected HTTP status code: {response.status_code}. Response: {response.text}")
-                response.raise_for_status()  # Optional: Re-raise for unexpected errors
-        except requests.exceptions.RequestException as e:
-            print(f"Request failed: {e}")
-            raise e
+                raise APIServerError(
+                    f"Unexpected status code: {response.status_code} - {response.text}",
+                    url=url,
+                    status_code=response.status_code
+                )
 
-    raise Exception(f"Failed to fetch the URL after {max_retries} retries")
+        except requests.exceptions.Timeout as e:
+            raise APITimeoutError(f"Request timed out: {e}", url=url)
+        except requests.exceptions.ConnectionError as e:
+            raise APIConnectionError(f"Connection failed: {e}", url=url)
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Request failed for {url}: {e}")
+            raise APIConnectionError(f"Request failed: {e}", url=url)
+
+    # If we exit the loop, retries were exhausted
+    raise APIRetryExhaustedError(
+        f"Failed to fetch URL after {max_retries} retries. Last error: {last_error}",
+        url=url,
+        retries=max_retries
+    )
 
 
 def create_signup_obj(signup: Dict[str, Any]) -> Signup:
