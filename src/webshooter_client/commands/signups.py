@@ -3,6 +3,7 @@ from typing import Dict, List
 from webshooter_client.api.api_calls import get_competition, get_signups
 from webshooter_client.models.competition import Competition
 from webshooter_client.models.signup import Signup
+from webshooter_client.common.output_utils import print_competition_header, matches_club_and_card
 from tabulate import tabulate
 
 
@@ -14,13 +15,7 @@ class SignupsCommand:
         result: Dict[int, Dict[str, object]] = {}
 
         competition: Competition = get_competition(competition_id=competition_id)
-
-        # output some info about the competition
-        print(f"Competition: {competition.name}")
-        print(f"Type: {competition.type.display_name}")
-        print(f"Date: {competition.competition_date.isoformat()}")
-        print(f"Location: {competition.venue}, {competition.city}")
-        print("")
+        print_competition_header(competition)
 
         signups: List[Signup] = get_signups(competition_id=competition_id)
 
@@ -32,7 +27,7 @@ class SignupsCommand:
                 counter_all_starts_in_weaponclasses.get(signup.weapon_class_general, 0) + 1
             )
 
-            if club == signup.spsf_club_number and (card is None or card == signup.shooting_card_number):
+            if matches_club_and_card(signup, club, card):
 
                 counter_club_starts_in_weaponclasses[signup.weapon_class_general] = (
                     counter_club_starts_in_weaponclasses.get(signup.weapon_class_general, 0) + 1

@@ -3,6 +3,7 @@ from tabulate import tabulate
 from webshooter_client.api.api_calls import get_patrols, get_competition
 from webshooter_client.models.competition import Competition
 from webshooter_client.models.patrol import Patrol
+from webshooter_client.common.output_utils import print_competition_header, matches_club_and_card
 
 
 class StartTimesCommand:
@@ -12,20 +13,14 @@ class StartTimesCommand:
     def get_starttimes(competition_id: int, club: str, card: Optional[str]) -> None:
 
         competition: Competition = get_competition(competition_id=competition_id)
-
-        # output some info about the competition
-        print(f"Competition: {competition.name}")
-        print(f"Type: {competition.type.display_name}")
-        print(f"Date: {competition.competition_date.isoformat()}")
-        print(f"Location: {competition.venue}, {competition.city}")
-        print("")
+        print_competition_header(competition)
 
         patrols: List[Patrol] = get_patrols(competition_id=competition_id)
 
         table_data = []
         for patrol in patrols:
             for signup in patrol.signups:
-                if club == signup.spsf_club_number and (card is None or card == signup.shooting_card_number):
+                if matches_club_and_card(signup, club, card):
                     table_data.append(
                         [
                             signup.shooting_card_number,

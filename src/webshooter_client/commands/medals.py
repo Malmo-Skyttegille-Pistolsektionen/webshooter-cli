@@ -3,6 +3,7 @@ from webshooter_client.api.api_calls import get_competitions, get_results
 from webshooter_client.models.competition import Competition, CompetitionType
 from tabulate import tabulate
 from webshooter_client.models.result import StdMedal
+from webshooter_client.common.output_utils import matches_club_and_card
 
 
 class MedalsCommand:
@@ -27,7 +28,7 @@ class MedalsCommand:
                 signup = result.signup
                 key = (signup.shooting_card_number, signup.fullname)
 
-                if club == signup.spsf_club_number and (card is None or card == signup.shooting_card_number):
+                if matches_club_and_card(signup, club, card):
 
                     if key not in shooter_medals:
                         shooter_medals[key] = {}
