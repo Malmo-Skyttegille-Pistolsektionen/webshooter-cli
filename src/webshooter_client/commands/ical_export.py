@@ -3,9 +3,11 @@ from datetime import datetime, timezone
 from webshooter_client.api.api_calls import get_patrols, get_competition
 from webshooter_client.models.competition import Competition, CompetitionType
 from webshooter_client.models.patrol import Patrol
+from webshooter_client.common.output_utils import matches_club_and_card
+from webshooter_client.commands.base_command import BaseCommand
 
 
-class ICalExportCommand:
+class ICalExportCommand(BaseCommand):
     """Command to export start times to iCal format."""
 
     @staticmethod
@@ -21,7 +23,7 @@ class ICalExportCommand:
 
             for patrol in patrols:
                 for signup in patrol.signups:
-                    if club == signup.spsf_club_number and card is None or card == signup.shooting_card_number:
+                    if matches_club_and_card(signup, club, card):
 
                         ICalExportCommand.write_ical_event(
                             file=file,
