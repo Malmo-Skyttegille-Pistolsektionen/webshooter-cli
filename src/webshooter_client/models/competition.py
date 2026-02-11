@@ -1,14 +1,11 @@
 from dataclasses import dataclass
-from enum import Enum
 from datetime import date
 
+from webshooter_client.common.enums import DisplayEnum
 
-class CompetitionType(Enum):
-    def __new__(cls, value, display_name):
-        obj = object.__new__(cls)
-        obj._value_ = value
-        obj.display_name = display_name
-        return obj
+
+class CompetitionType(DisplayEnum):
+    """Competition type enum with display names."""
 
     MILITARY = ("military", "Militär snabbmatch")
     PRECISION = ("precision", "Precision")

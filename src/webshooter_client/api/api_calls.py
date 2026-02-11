@@ -53,22 +53,38 @@ def get_competition(competition_id: int) -> Competition:
 
     Returns:
         Competition object with details about the competition
+
+    Raises:
+        DataValidationError: If response data is missing required fields
     """
+    from webshooter_client.api.exceptions import DataValidationError
+
     logging.info(f"Fetching competition: {competition_id}")
     url = BASE_URL_COMPETITION.format(competition=competition_id)
 
     data = fetch_data(url=url)
 
+    if "competitions" not in data or data["competitions"] is None:
+        raise DataValidationError(f"No competition data in response for ID {competition_id}")
+
     competition = data["competitions"]
+
+    # Validate required fields
+    required_fields = ["id", "name", "date", "results_type"]
+    missing_fields = [field for field in required_fields if field not in competition]
+    if missing_fields:
+        raise DataValidationError(f"Missing required competition fields: {', '.join(missing_fields)}")
 
     competition_obj: Competition = Competition(
         id=competition["id"],
         name=competition["name"],
         competition_date=date.fromisoformat(competition["date"]),
         type=CompetitionType(competition["results_type"]),
-        city=competition["contact_city"],
-        venue=competition["contact_venue"],
-        signups_close=date.fromisoformat(competition["signups_closing_date"]),
+        city=competition.get("contact_city", "Unknown"),
+        venue=competition.get("contact_venue", "Unknown"),
+        signups_close=date.fromisoformat(competition["signups_closing_date"])
+        if competition.get("signups_closing_date")
+        else None,
     )
 
     return competition_obj
@@ -280,7 +296,35 @@ def fetch_data(url: str, max_retries: int = 5, backoff_factor: int = 10) -> Dict
 
 
 def create_signup_obj(signup: Dict[str, Any]) -> Signup:
-    """Create a Signup object from API response data."""
+    """Create a Signup object from API response data.
+
+    Args:
+        signup: Raw signup data from API
+
+    Returns:
+        Signup object
+
+    Raises:
+        DataValidationError: If required fields are missing or invalid
+    """
+    from webshooter_client.api.exceptions import DataValidationError
+
+    # Validate required fields exist
+    required_fields = ["id", "club", "user", "weaponclass"]
+    missing_fields = [field for field in required_fields if field not in signup or signup[field] is None]
+    if missing_fields:
+        raise DataValidationError(f"Missing required signup fields: {', '.join(missing_fields)}")
+
+    # Validate nested required fields
+    if "districts_id" not in signup["club"] or "clubs_nr" not in signup["club"]:
+        raise DataValidationError("Missing club identification fields (districts_id or clubs_nr)")
+
+    if "fullname" not in signup["user"]:
+        raise DataValidationError("Missing user fullname in signup")
+
+    if "classname" not in signup["weaponclass"] or "classname_general" not in signup["weaponclass"]:
+        raise DataValidationError("Missing weapon class fields in signup")
+
     signup_obj: Signup = Signup(
         id=signup["id"],
         spsf_club_number=f"{signup['club']['districts_id']}-{signup['club']['clubs_nr']}",

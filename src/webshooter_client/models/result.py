@@ -1,16 +1,12 @@
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import List, Optional
 
 from webshooter_client.models.signup import Signup
+from webshooter_client.common.enums import DisplayEnum
 
 
-class StdMedal(Enum):
-    def __new__(cls, value, display_name):
-        obj = object.__new__(cls)
-        obj._value_ = value
-        obj.display_name = display_name
-        return obj
+class StdMedal(DisplayEnum):
+    """Standard medal enum with display names."""
 
     BRONZE = "B", "Brons"
     SILVER = "S", "Silver"

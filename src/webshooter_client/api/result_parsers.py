@@ -42,7 +42,20 @@ class ResultParser(ABC):
 
         Returns:
             Dictionary of base fields for Result construction
+
+        Raises:
+            DataValidationError: If required fields are missing or invalid
         """
+        from webshooter_client.api.exceptions import DataValidationError
+
+        # Validate required fields
+        if not result_data:
+            raise DataValidationError("Result data is empty or None")
+
+        if "placement" not in result_data:
+            raise DataValidationError(f"Missing required field 'placement' in result for {signup.fullname}")
+
+        # Handle points with default for missing values
         points = int(result_data.get("points", -1))
         if points == -1:
             logging.warning(f"Result for {signup.fullname} has invalid points value: -1")
