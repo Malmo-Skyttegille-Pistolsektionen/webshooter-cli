@@ -102,10 +102,10 @@ class TestResultParsing:
         """Parse Military results from real API response."""
         comp_data = load_test_data(149, "competition_149.json")
         results_data = load_test_data(149, "competition_149_results.json")
-        signups_data = load_test_data(149, "competition_149_signups.json")
 
         with patch("webshooter_client.api.api_calls.fetch_data") as mock_fetch:
-            mock_fetch.side_effect = [comp_data, signups_data, results_data]
+            # First call: get_competition(), second call: results URL
+            mock_fetch.side_effect = [comp_data, results_data]
             results = get_results(149)
 
         assert len(results) > 0
@@ -122,10 +122,9 @@ class TestResultParsing:
         """Parse Precision results from real API response."""
         comp_data = load_test_data(152, "competition_152.json")
         results_data = load_test_data(152, "competition_152_results.json")
-        signups_data = load_test_data(152, "competition_152_signups.json")
 
         with patch("webshooter_client.api.api_calls.fetch_data") as mock_fetch:
-            mock_fetch.side_effect = [comp_data, signups_data, results_data]
+            mock_fetch.side_effect = [comp_data, results_data]
             results = get_results(152)
 
         assert len(results) > 0
@@ -135,10 +134,9 @@ class TestResultParsing:
         """Parse Field results from real API response."""
         comp_data = load_test_data(157, "competition_157.json")
         results_data = load_test_data(157, "competition_157_results.json")
-        signups_data = load_test_data(157, "competition_157_signups.json")
 
         with patch("webshooter_client.api.api_calls.fetch_data") as mock_fetch:
-            mock_fetch.side_effect = [comp_data, signups_data, results_data]
+            mock_fetch.side_effect = [comp_data, results_data]
             results = get_results(157)
 
         assert len(results) > 0
@@ -152,10 +150,9 @@ class TestResultParsing:
         """Results are correctly linked to signup data."""
         comp_data = load_test_data(149, "competition_149.json")
         results_data = load_test_data(149, "competition_149_results.json")
-        signups_data = load_test_data(149, "competition_149_signups.json")
 
         with patch("webshooter_client.api.api_calls.fetch_data") as mock_fetch:
-            mock_fetch.side_effect = [comp_data, signups_data, results_data]
+            mock_fetch.side_effect = [comp_data, results_data]
             results = get_results(149)
 
         # Each result should have a signup with required fields
@@ -238,18 +235,17 @@ class TestErrorHandling:
     def test_empty_results_list(self, load_test_data):
         """Handle competition with no results gracefully."""
         comp_data = load_test_data(149, "competition_149.json")
-        signups_data = load_test_data(149, "competition_149_signups.json")
         empty_results = {"results": []}
 
         with patch("webshooter_client.api.api_calls.fetch_data") as mock_fetch:
-            mock_fetch.side_effect = [comp_data, signups_data, empty_results]
+            mock_fetch.side_effect = [comp_data, empty_results]
             results = get_results(149)
 
         assert results == []
 
     def test_empty_signups_list(self):
         """Handle competition with no signups gracefully."""
-        empty_signups = {"signups": []}
+        empty_signups = {"signups": {"data": []}}
 
         with patch("webshooter_client.api.api_calls.fetch_data", return_value=empty_signups):
             signups = get_signups(999)
@@ -259,15 +255,15 @@ class TestErrorHandling:
     def test_result_missing_placement_raises_error(self, load_test_data):
         """Result missing placement field raises DataValidationError."""
         comp_data = load_test_data(149, "competition_149.json")
-        signups_data = load_test_data(149, "competition_149_signups.json")
 
-        # Create invalid result without placement
-        invalid_results = {
-            "results": [{"signups_id": 1, "points": 100}]  # Missing placement
-        }
+        # Load real results data and modify first result to have missing placement
+        results_data = load_test_data(149, "competition_149_results.json")
+        if results_data["results"]:
+            # Remove placement from first result
+            del results_data["results"][0]["placement"]
 
         with patch("webshooter_client.api.api_calls.fetch_data") as mock_fetch:
-            mock_fetch.side_effect = [comp_data, signups_data, invalid_results]
+            mock_fetch.side_effect = [comp_data, results_data]
             with pytest.raises(DataValidationError) as exc_info:
                 get_results(149)
             assert "placement" in str(exc_info.value).lower()
