@@ -31,10 +31,10 @@ def matches_club_and_card(signup: Signup, club: str, card: str = None) -> bool:
     # If card is provided, only match that specific card (ignore club)
     if card:
         return card == signup.shooting_card_number
-    
+
     # If only club is provided, match all members of that club
     if club:
         return club == signup.spsf_club_number
-    
+
     # If neither is provided, match nothing
     return False
