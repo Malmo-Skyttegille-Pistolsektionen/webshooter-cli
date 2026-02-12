@@ -13,7 +13,7 @@ if __package__ is None or len(__package__) == 0:
 
 from webshooter_client.api import api_calls
 from webshooter_client.common.application_config import ApplicationConfig
-from webshooter_client.commands import competitions, medals, results, signups, start_times, ical_export, starts
+from webshooter_client.commands import bests, competitions, medals, results, signups, start_times, ical_export, starts
 
 
 class Command:
@@ -113,6 +113,19 @@ class Command:
         )
         parser_competitions.add_argument("year", nargs="?", help="Optional year", type=int)
 
+        parser_bests = subparsers.add_parser(
+            "bests",
+            help="Display personal best results in Precision and Military competitions",
+        )
+        parser_bests.add_argument("year", help="Year to analyze", type=int)
+        parser_bests.add_argument(
+            "--top",
+            help="Number of top results to show per weapon class (default: 10)",
+            type=int,
+            default=10,
+        )
+        parser_bests.add_argument("--card", help="Pistolskyttekort number, e.g. 12345", required=True)
+
         args = self.__parser.parse_args()
 
         return args
@@ -159,6 +172,8 @@ def _execute_command(command, args):
         starts.get_starts_total(club=args.club, card=args.card, year=args.year)
     elif command == "competitions":
         competitions.get_competitions(year=args.year)
+    elif command == "bests":
+        bests.get_personal_bests(card=args.card, year=args.year, top_n=args.top)
     elif command == "exit":
         sys.exit(1)
     else:
