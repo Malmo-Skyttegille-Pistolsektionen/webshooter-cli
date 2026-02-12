@@ -82,9 +82,9 @@ def get_competition(competition_id: int) -> Competition:
         type=CompetitionType(competition["results_type"]),
         city=competition.get("contact_city", "Unknown"),
         venue=competition.get("contact_venue", "Unknown"),
-        signups_close=date.fromisoformat(competition["signups_closing_date"])
-        if competition.get("signups_closing_date")
-        else None,
+        signups_close=(
+            date.fromisoformat(competition["signups_closing_date"]) if competition.get("signups_closing_date") else None
+        ),
     )
 
     return competition_obj
@@ -257,26 +257,18 @@ def fetch_data(url: str, max_retries: int = 5, backoff_factor: int = 10) -> Dict
             elif response.status_code == 500:
                 retries += 1
                 wait_time = backoff_factor * retries
-                logging.warning(
-                    f"HTTP 500 Error from {url}. Retry {retries}/{max_retries} in {wait_time}s..."
-                )
+                logging.warning(f"HTTP 500 Error from {url}. Retry {retries}/{max_retries} in {wait_time}s...")
                 time.sleep(wait_time)
-                last_error = APIServerError(
-                    "Server returned HTTP 500",
-                    url=url,
-                    status_code=500
-                )
+                last_error = APIServerError("Server returned HTTP 500", url=url, status_code=500)
             elif 400 <= response.status_code < 500:
                 raise APIClientError(
-                    f"Client error: {response.status_code} - {response.text}",
-                    url=url,
-                    status_code=response.status_code
+                    f"Client error: {response.status_code} - {response.text}", url=url, status_code=response.status_code
                 )
             else:
                 raise APIServerError(
                     f"Unexpected status code: {response.status_code} - {response.text}",
                     url=url,
-                    status_code=response.status_code
+                    status_code=response.status_code,
                 )
 
         except requests.exceptions.Timeout as e:
@@ -289,9 +281,7 @@ def fetch_data(url: str, max_retries: int = 5, backoff_factor: int = 10) -> Dict
 
     # If we exit the loop, retries were exhausted
     raise APIRetryExhaustedError(
-        f"Failed to fetch URL after {max_retries} retries. Last error: {last_error}",
-        url=url,
-        retries=max_retries
+        f"Failed to fetch URL after {max_retries} retries. Last error: {last_error}", url=url, retries=max_retries
     )
 
 

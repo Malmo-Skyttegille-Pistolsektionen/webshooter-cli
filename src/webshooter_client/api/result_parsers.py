@@ -77,10 +77,7 @@ class SeriesResultParser(ResultParser):
     def parse(self, result_data: Dict[str, Any], signup: Signup) -> ResultBase:
         """Parse result with series data."""
         base_kwargs = self._parse_base_fields(result_data, signup)
-        series = [
-            SeriesResult(points=s["points"], inner_tens=s.get("hits"))
-            for s in result_data.get("results", [])
-        ]
+        series = [SeriesResult(points=s["points"], inner_tens=s.get("hits")) for s in result_data.get("results", [])]
         return self.result_class(**base_kwargs, series=series)
 
 

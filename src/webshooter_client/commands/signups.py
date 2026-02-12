@@ -65,9 +65,7 @@ class SignupsCommand(BaseCommand):
 
             card_number = signup.shooting_card_number
             if card_number not in result:
-                result[card_number] = SignupData(
-                    card=card_number, name=signup.fullname, classes=set(), patrol_mates=[]
-                )
+                result[card_number] = SignupData(card=card_number, name=signup.fullname, classes=set(), patrol_mates=[])
 
             result[card_number].classes.add(signup.weapon_class)
 

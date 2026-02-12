@@ -74,9 +74,7 @@ class TestAPIRetryExhaustedError:
 
     def test_retry_exhausted_with_context(self):
         """APIRetryExhaustedError provides retry context."""
-        error = APIRetryExhaustedError(
-            "Failed after 3 retries", url="https://webshooter.se", retries=3
-        )
+        error = APIRetryExhaustedError("Failed after 3 retries", url="https://webshooter.se", retries=3)
         assert "3 retries" in str(error)
         assert error.url == "https://webshooter.se"
         assert isinstance(error, WebShooterAPIError)

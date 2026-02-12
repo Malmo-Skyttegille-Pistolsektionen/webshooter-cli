@@ -22,9 +22,7 @@ class ResultFormatter(ABC):
         """
         pass
 
-    def _filter_and_collect_data(
-        self, results: List[ResultBase], club: str, card: str, row_builder
-    ) -> List[List[Any]]:
+    def _filter_and_collect_data(self, results: List[ResultBase], club: str, card: str, row_builder) -> List[List[Any]]:
         """Filter results and build table data using provided row builder.
 
         Args:
