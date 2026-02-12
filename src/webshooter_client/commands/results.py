@@ -5,7 +5,7 @@ from typing import Optional
 from webshooter_client.api.api_calls import get_results, get_competition
 from webshooter_client.models.competition import Competition
 from webshooter_client.common.output_utils import print_competition_header
-from webshooter_client.commands.result_formatters import ResultFormatterFactory
+from webshooter_client.commands.result_formatters import get_formatter
 
 
 def get_results_for_competition(competition_id: int, club: str, card: Optional[str] = None) -> None:
@@ -24,6 +24,6 @@ def get_results_for_competition(competition_id: int, club: str, card: Optional[s
 
     print_competition_header(competition)
 
-    # Use strategy pattern to format results based on competition type
-    formatter = ResultFormatterFactory.get_formatter(competition.type)
+    # Get formatter for competition type using simple function
+    formatter = get_formatter(competition.type)
     return formatter.format_and_print(results, club, card)

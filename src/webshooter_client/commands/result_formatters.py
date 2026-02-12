@@ -1,61 +1,47 @@
-"""Strategy pattern for formatting different competition result types."""
+"""Formatters for different competition result types."""
 
-from abc import ABC, abstractmethod
-from typing import List, Any
+from typing import List, Any, Callable
 from tabulate import tabulate
 
 from webshooter_client.models.result import ResultBase
 from webshooter_client.models.competition import CompetitionType
 
 
-class ResultFormatter(ABC):
-    """Abstract base class for result formatting strategies."""
+def _filter_and_collect_data(results: List[ResultBase], club: str, card: str, row_builder: Callable) -> List[List[Any]]:
+    """Filter results and build table data using provided row builder.
 
-    @abstractmethod
-    def format_and_print(self, results: List[ResultBase], club: str, card: str) -> None:
-        """Format and print results for a specific competition type.
+    Args:
+        results: List of results to process
+        club: Club number to filter by
+        card: Optional card number to filter by (takes precedence over club)
+        row_builder: Function that takes a ResultBase and returns a list of values
 
-        Args:
-            results: List of ResultBase objects to format
-            club: Club number to filter by
-            card: Optional card number to filter by
-        """
-        pass
-
-    def _filter_and_collect_data(self, results: List[ResultBase], club: str, card: str, row_builder) -> List[List[Any]]:
-        """Filter results and build table data using provided row builder.
-
-        Args:
-            results: List of results to process
-            club: Club number to filter by
-            card: Optional card number to filter by (takes precedence over club)
-            row_builder: Function that takes a ResultBase and returns a list of values
-
-        Returns:
-            List of table rows
-        """
-        table_data = []
-        for result in results:
-            signup = result.signup
-            # If card is provided, match only that card (ignore club)
-            # Otherwise, match all signups from the club
-            if (club == signup.spsf_club_number and not card) or card == signup.shooting_card_number:
-                table_data.append(row_builder(result))
-        return table_data
-
-    def _print_sorted_table(self, table_data: List[List[Any]], headers: List[str]) -> None:
-        """Sort and print table data.
-
-        Args:
-            table_data: Table rows
-            headers: Column headers
-        """
-        # Sort by Main Class (index 2) and Place (index 4)
-        sorted_data = sorted(table_data, key=lambda row: (row[2], row[4]))
-        print(tabulate(sorted_data, headers=headers, tablefmt="simple"))
+    Returns:
+        List of table rows
+    """
+    table_data = []
+    for result in results:
+        signup = result.signup
+        # If card is provided, match only that card (ignore club)
+        # Otherwise, match all signups from the club
+        if (club == signup.spsf_club_number and not card) or card == signup.shooting_card_number:
+            table_data.append(row_builder(result))
+    return table_data
 
 
-class PrecisionMilitaryResultFormatter(ResultFormatter):
+def _print_sorted_table(table_data: List[List[Any]], headers: List[str]) -> None:
+    """Sort and print table data.
+
+    Args:
+        table_data: Table rows
+        headers: Column headers
+    """
+    # Sort by Main Class (index 2) and Place (index 4)
+    sorted_data = sorted(table_data, key=lambda row: (row[2], row[4]))
+    print(tabulate(sorted_data, headers=headers, tablefmt="simple"))
+
+
+class PrecisionMilitaryFormatter:
     """Formatter for PRECISION and MILITARY competition results."""
 
     def format_and_print(self, results: List[ResultBase], club: str, card: str) -> None:
@@ -75,12 +61,12 @@ class PrecisionMilitaryResultFormatter(ResultFormatter):
                 " ".join(str(series.points) for series in result.series),
             ]
 
-        table_data = self._filter_and_collect_data(results, club, card, build_row)
+        table_data = _filter_and_collect_data(results, club, card, build_row)
         headers = ["Card", "Name", "Main Class", "Sub class", "Place", "Medal", "Points", "Xs", "Series"]
-        self._print_sorted_table(table_data, headers)
+        _print_sorted_table(table_data, headers)
 
 
-class FieldResultFormatter(ResultFormatter):
+class FieldFormatter:
     """Formatter for FIELD competition results."""
 
     def format_and_print(self, results: List[ResultBase], club: str, card: str) -> None:
@@ -101,7 +87,7 @@ class FieldResultFormatter(ResultFormatter):
                 " ".join(f"{r.hits}/{r.figure_hits}" for r in result.stations),
             ]
 
-        table_data = self._filter_and_collect_data(results, club, card, build_row)
+        table_data = _filter_and_collect_data(results, club, card, build_row)
         headers = [
             "Card",
             "Name",
@@ -114,33 +100,31 @@ class FieldResultFormatter(ResultFormatter):
             "Points",
             "Stations",
         ]
-        self._print_sorted_table(table_data, headers)
+        _print_sorted_table(table_data, headers)
 
 
-class ResultFormatterFactory:
-    """Factory for creating appropriate result formatters."""
+# Mapping of competition types to formatter instances
+_FORMATTERS = {
+    CompetitionType.PRECISION: PrecisionMilitaryFormatter(),
+    CompetitionType.MILITARY: PrecisionMilitaryFormatter(),
+    CompetitionType.FIELD: FieldFormatter(),
+    CompetitionType.POINTFIELD: FieldFormatter(),
+}
 
-    _formatters = {
-        CompetitionType.PRECISION: PrecisionMilitaryResultFormatter(),
-        CompetitionType.MILITARY: PrecisionMilitaryResultFormatter(),
-        CompetitionType.FIELD: FieldResultFormatter(),
-        CompetitionType.POINTFIELD: FieldResultFormatter(),  # POINTFIELD uses same format as FIELD
-    }
 
-    @classmethod
-    def get_formatter(cls, competition_type: CompetitionType) -> ResultFormatter:
-        """Get the appropriate formatter for a competition type.
+def get_formatter(competition_type: CompetitionType):
+    """Get the appropriate formatter for a competition type.
 
-        Args:
-            competition_type: Type of competition
+    Args:
+        competition_type: Type of competition
 
-        Returns:
-            ResultFormatter instance for the competition type
+    Returns:
+        Formatter instance for the competition type
 
-        Raises:
-            ValueError: If competition type is not supported
-        """
-        formatter = cls._formatters.get(competition_type)
-        if not formatter:
-            raise ValueError(f"No formatter available for competition type: {competition_type}")
-        return formatter
+    Raises:
+        ValueError: If competition type is not supported
+    """
+    formatter = _FORMATTERS.get(competition_type)
+    if not formatter:
+        raise ValueError(f"No formatter available for competition type: {competition_type}")
+    return formatter
