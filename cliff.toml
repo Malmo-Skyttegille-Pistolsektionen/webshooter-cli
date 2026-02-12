@@ -1,0 +1,116 @@
+# git-cliff ~ default configuration file
+# https://git-cliff.org/docs/configuration
+#
+# Lines starting with "#" are comments.
+# Configuration options are organized into tables and keys.
+# See documentation for more information on available options.
+
+[changelog]
+# template for the changelog header
+#header = """
+## Release Notes {version}\n
+#"""
+# template for the changelog body
+# https://keats.github.io/tera/docs/#introduction
+
+# Filter merge commits
+# {% for group, commits in commits | filter(attribute="merge_commit", value=false) | group_by(attribute="group") %}
+
+
+body = """{% if version -%}
+## {{ version | trim_start_matches(pat="v") }} - {{ timestamp | date(format="%Y-%m-%d") }}
+{%- else -%}
+## [unreleased]
+{%- endif %}
+
+{% for group, commits in commits | group_by(attribute="group") %}
+
+### {{ group | striptags | trim | upper_first }}
+
+{% for commit in commits -%}
+{% if "Documentation" in group or "Testing" in group %}
+- {% if commit.breaking %}[**breaking**] {% endif %}\
+  {{ commit.raw_message | split(pat=":") | first | trim }}: {{ commit.raw_message | split(pat="\n") | first | split(pat=":") | last | trim -}}
+{% else %}
+- {% if commit.breaking %}[**breaking**] {% endif %}\
+  {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
+  {{ commit.message | trim -}}
+{% endif -%}
+{%- if commit.remote.username %} by @{{ commit.remote.username }}{%- endif %}
+{%- if commit.remote.pr_number %} in #{{ commit.remote.pr_number }}{%- endif %}
+{% endfor %}
+{% endfor %}
+
+{%- if gitlab.contributors | filter(attribute="is_first_time", value=true) | length != 0 %}
+  
+## New Contributors
+{%- endif %}
+{% for contributor in gitlab.contributors | filter(attribute="is_first_time", value=true) %}
+     * @{{ contributor.username }} made their first contribution {%- if contributor.pr_number %} in #{{ contributor.pr_number }}{%- endif %}  
+{% endfor %}
+
+"""
+
+
+# template for the changelog footer
+footer = """
+"""
+# remove the leading and trailing s
+trim = true
+# postprocessors
+postprocessors = [
+  # { pattern = '<REPO>', replace = "https://github.com/orhun/git-cliff" }, # replace repository URL
+]
+# render body even when there are no releases to process
+# render_always = true
+# output file path
+# output = "test.md"
+
+[git]
+# parse the commits based on https://www.conventionalcommits.org
+conventional_commits = true
+# filter out the commits that are not conventional
+filter_unconventional = true
+# process each line of a commit as an individual commit
+split_commits = false
+# regex for preprocessing the commit messages
+commit_preprocessors = [
+
+  # Replace issue numbers
+  #{ pattern = '\((\w+\s)?#([0-9]+)\)', replace = "([#${2}](<REPO>/issues/${2}))"},
+  # Check spelling of the commit with https://github.com/crate-ci/typos
+  # If the spelling is incorrect, it will be automatically fixed.
+  #{ pattern = '.*', replace_command = 'typos --write-changes -' },
+]
+# regex for parsing and grouping commits
+
+# SYSDEV
+# types: feat, fix, refactor, chore, security
+# scope: tests, build, ci, conf, docs, reqs
+
+# needed for sysdev or is it just a "fix:"?
+#   { message = "^revert", group = "<!-- 9 -->◀️ Revert" },
+
+commit_parsers = [
+  { message = "^.*(docs)", group = "<!-- 4 -->📚 Documentation" },
+  { message = "^.*(tests)", group = "<!-- 5 -->📚 Testing" },
+  { message = "^feat", group = "<!-- 0 -->🚀 Features" },
+  { message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
+  { message = "^refactor", group = "<!-- 2 -->🚜 Refactor" },
+  { message = "^security", group = "<!-- 3 -->🚜 Security" },
+  { message = "^chore", group = "<!-- 7 -->⚙️ Miscellaneous Tasks" },
+  { message = "Merge branch.*", group = "<!-- 10 --> 💀 IGNORE-MERGE-BRANCH-COMMITS", skip = true },
+  { message = ".*", group = "<!-- 99 --> NON-VALID-COMMITS" },
+]
+
+# filter out the commits that are not matched by commit parsers
+filter_commits = false
+# sort the tags topologically
+topo_order = false
+# sort the commits inside sections by oldest/newest order
+sort_commits = "oldest"
+
+# If set to true, any breaking changes will be protected against being skipped due to any commit parser.
+protect_breaking_commits = true
+
+initial_tag = "0.1.0"

@@ -79,9 +79,33 @@ jobs:
         name: dist
         path: dist/
 
-  upload-release-assets:
-    name: Upload release assets
+  generate-changelog:
+    name: Generate changelog with git-cliff
     needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    outputs:
+      changelog: ${{ steps.git-cliff.outputs.content }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Generate changelog
+      id: git-cliff
+      uses: orhun/git-cliff-action@v4
+      with:
+        config: cliff.toml
+        args: --verbose --latest --strip header
+      env:
+        OUTPUT: CHANGELOG.md
+        GITHUB_REPO: ${{ github.repository }}
+
+  upload-release-assets:
+    name: Upload release assets and update description
+    needs: [build, generate-changelog]
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
     
@@ -92,10 +116,11 @@ jobs:
         name: dist
         path: dist
     
-    - name: Upload wheel to release
+    - name: Upload wheel and update release with changelog
       uses: softprops/action-gh-release@v2
       with:
         files: dist/*
+        body: ${{ needs.generate-changelog.outputs.changelog }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

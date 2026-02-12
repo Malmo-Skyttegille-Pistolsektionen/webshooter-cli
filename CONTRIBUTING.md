@@ -226,7 +226,12 @@ The client currently supports webshooter.se API **v4.1.9**. If the API version c
 
 ## Release Process
 
-This project uses **dynamic versioning** based on git tags and **GitHub releases**.
+This project uses **dynamic versioning** via `hatch-vcs` and **automated changelog generation** via `git-cliff`.
+
+### Prerequisites
+- All commits must follow [Conventional Commits](https://www.conventionalcommits.org/) format
+- Semantic commit types: `feat`, `fix`, `refactor`, `chore`, `security`
+- Scopes (optional): `conf`, `ci`, `tests`, `reqs`, `docs`
 
 ### Creating a Release
 
@@ -246,15 +251,15 @@ This project uses **dynamic versioning** based on git tags and **GitHub releases
 3. **Create a GitHub Release:**
    - Go to: https://github.com/frazz/webshooter/releases/new
    - Choose the tag you just pushed (v0.1.0)
-   - Generate release notes (GitHub can auto-generate from PRs/commits)
-   - Add custom release notes if desired
-   - Click "Publish release"
+   - Click "Publish release" (leave title and description empty)
 
 4. **GitHub Actions will automatically:**
    - Run linting (Black, flake8)
    - Run all tests on Python 3.13
    - Build the wheel package
+   - **Generate changelog with git-cliff from conventional commits**
    - Upload the wheel to the GitHub release
+   - **Update release description with generated changelog**
 
 ### Version Numbering
 
@@ -271,6 +276,54 @@ The package uses `hatch-vcs` for dynamic versioning:
 - No need to manually update version in `pyproject.toml`
 - Development versions include commit hash: `0.1.0.dev3+g5440c4b`
 - Build artifacts are named: `webshooter_client-0.1.0-py3-none-any.whl`
+
+### Changelog Generation
+
+Powered by [git-cliff](https://git-cliff.org/):
+- Configuration in `cliff.toml`
+- Commits grouped by type:
+  - 🚀 Features (`feat:`)
+  - 🐛 Bug Fixes (`fix:`)
+  - 🚜 Refactor (`refactor:`)
+  - 📚 Documentation (`docs`)
+  - 📚 Testing (`tests`)
+  - ⚙️ Miscellaneous Tasks (`chore:`)
+- Non-conventional commits are filtered out
+
+### Example Release Changelog
+```markdown
+## 0.1.0 - 2026-02-12
+
+### 🚀 Features
+- *(api)* add support for new competition types
+
+### 🐛 Bug Fixes
+- medals command now works with --card filter
+- *(tests)* fix all integration tests
+
+### 🚜 Refactor
+- implement strategy pattern for result formatters
+- *(docs)* consolidate api documentation into architecture.md
+
+### ⚙️ Miscellaneous Tasks
+- *(ci)* add github release workflow and improve ci
+- *(conf)* update python requirement to 3.13+
+```
+
+### Local Changelog Preview
+```bash
+# Install git-cliff
+cargo install git-cliff  # or via package manager
+
+# Generate changelog for latest tag
+git-cliff --latest
+
+# Generate full changelog
+git-cliff
+
+# Generate changelog for specific range
+git-cliff v0.1.0..HEAD
+```
 
 ### Installation from Release
 
