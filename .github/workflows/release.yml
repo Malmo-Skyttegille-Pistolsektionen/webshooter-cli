@@ -98,8 +98,9 @@ jobs:
       uses: orhun/git-cliff-action@v4
       with:
         config: cliff.toml
-        args: --verbose --latest --strip header
+        args: --verbose --latest --strip all
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         OUTPUT: CHANGELOG.md
         GITHUB_REPO: ${{ github.repository }}
 

@@ -41,11 +41,11 @@ body = """{% if version -%}
 {% endfor %}
 {% endfor %}
 
-{%- if gitlab.contributors | filter(attribute="is_first_time", value=true) | length != 0 %}
+{%- if github.contributors | filter(attribute="is_first_time", value=true) | length != 0 %}
   
 ## New Contributors
 {%- endif %}
-{% for contributor in gitlab.contributors | filter(attribute="is_first_time", value=true) %}
+{% for contributor in github.contributors | filter(attribute="is_first_time", value=true) %}
      * @{{ contributor.username }} made their first contribution {%- if contributor.pr_number %} in #{{ contributor.pr_number }}{%- endif %}  
 {% endfor %}
 
@@ -88,9 +88,6 @@ commit_preprocessors = [
 # types: feat, fix, refactor, chore, security
 # scope: tests, build, ci, conf, docs, reqs
 
-# needed for sysdev or is it just a "fix:"?
-#   { message = "^revert", group = "<!-- 9 -->◀️ Revert" },
-
 commit_parsers = [
   { message = "^.*(docs)", group = "<!-- 4 -->📚 Documentation" },
   { message = "^.*(tests)", group = "<!-- 5 -->📚 Testing" },
@@ -99,7 +96,10 @@ commit_parsers = [
   { message = "^refactor", group = "<!-- 2 -->🚜 Refactor" },
   { message = "^security", group = "<!-- 3 -->🚜 Security" },
   { message = "^chore", group = "<!-- 7 -->⚙️ Miscellaneous Tasks" },
-  { message = "Merge branch.*", group = "<!-- 10 --> 💀 IGNORE-MERGE-BRANCH-COMMITS", skip = true },
+  # Skip GitHub merge commits (regular merge strategy)
+  { message = "^Merge pull request #", skip = true },
+  # Skip GitLab-style merge commits (if any)
+  { message = "^Merge branch.*", skip = true },
   { message = ".*", group = "<!-- 99 --> NON-VALID-COMMITS" },
 ]
 
