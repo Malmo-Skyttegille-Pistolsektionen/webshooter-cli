@@ -18,6 +18,7 @@ class PersonalBest:
 
     competition_name: str
     competition_date: date
+    competition_type: str  # "Precision" or "Militär snabbmatch"
     weapon_class: str
     points: int
     inner_tens: int
@@ -36,7 +37,12 @@ def _format_series(series: List[SeriesResult]) -> str:
 
 
 def _extract_personal_best(result: ResultBase, competition: Competition, card: str) -> Optional[PersonalBest]:
-    """Extract PersonalBest from result if card matches and has series data."""
+    """Extract PersonalBest from result if card matches and has series data.
+
+    For Precision competitions, only uses the 7 regular series scores,
+    ignoring any finals (which are added to total points but not in series list).
+    Military competitions always have 12 series.
+    """
     if result.signup.shooting_card_number != card:
         return None
 
@@ -47,11 +53,25 @@ def _extract_personal_best(result: ResultBase, competition: Competition, card: s
     if not result.series:
         return None
 
+    # For Precision: only count competitions with exactly 7 series
+    # Use sum of series points (ignores finals that may be in total)
+    if isinstance(result, PrecisionResult):
+        if len(result.series) != 7:
+            return None
+        # Use series sum, not total points (which may include finals)
+        points = sum(s.points for s in result.series)
+        competition_type = "Precision"
+    else:
+        # Military: use total points as normal
+        points = result.points
+        competition_type = "Militär snabbmatch"
+
     return PersonalBest(
         competition_name=competition.name,
         competition_date=competition.competition_date,
+        competition_type=competition_type,
         weapon_class=result.signup.weapon_class,
-        points=result.points,
+        points=points,
         inner_tens=_calculate_inner_tens(result.series),
         series=[s.points for s in result.series],
         placement=result.placement,
@@ -84,39 +104,27 @@ def _fetch_all_personal_bests(year: int, card: str) -> List[PersonalBest]:
     return personal_bests
 
 
-def _group_by_weapon_class(personal_bests: List[PersonalBest]) -> Dict[str, List[PersonalBest]]:
-    """Group personal bests by weapon class and sort by points descending."""
+def _group_by_type_and_class(
+    personal_bests: List[PersonalBest],
+) -> Dict[str, List[PersonalBest]]:
+    """Group personal bests by competition type and weapon class, sort by points descending."""
     grouped = defaultdict(list)
 
     for pb in personal_bests:
-        grouped[pb.weapon_class].append(pb)
+        # Group by both type and class: "Precision - A3", "Militär snabbmatch - C3"
+        key = f"{pb.competition_type} - {pb.weapon_class}"
+        grouped[key].append(pb)
 
     # Sort each group by points (descending), then by date (newest first)
-    for weapon_class in grouped:
-        grouped[weapon_class].sort(key=lambda x: (-x.points, x.competition_date), reverse=False)
+    for key in grouped:
+        grouped[key].sort(key=lambda x: (-x.points, x.competition_date), reverse=False)
 
     return dict(grouped)
 
 
-def _determine_competition_type_for_class(weapon_class: str, personal_bests: List[PersonalBest]) -> str:
-    """Determine competition type name based on series count."""
-    if not personal_bests:
-        return "Unknown"
-
-    # Use first result to determine type
-    series_count = len(personal_bests[0].series)
-    if series_count == 7:
-        return "Precision"
-    elif series_count == 12:
-        return "Militär snabbmatch"
-    return "Unknown"
-
-
-def _format_weapon_class_section(weapon_class: str, personal_bests: List[PersonalBest], top_n: int) -> str:
-    """Format a single weapon class section."""
-    competition_type = _determine_competition_type_for_class(weapon_class, personal_bests)
-
-    output = [f"\n=== {competition_type} - {weapon_class} ==="]
+def _format_type_class_section(type_class_key: str, personal_bests: List[PersonalBest], top_n: int) -> str:
+    """Format a single competition type + weapon class section."""
+    output = [f"\n=== {type_class_key} ==="]
 
     # Take top N
     top_results = personal_bests[:top_n]
@@ -160,13 +168,13 @@ def get_personal_bests(card: str, year: int, top_n: int = 10) -> None:
         print(f"No results found for card {card} in {year}")
         return
 
-    # Group by weapon class
-    grouped = _group_by_weapon_class(personal_bests)
+    # Group by competition type and weapon class
+    grouped = _group_by_type_and_class(personal_bests)
 
-    # Display each weapon class (only those with results)
-    weapon_classes = sorted(grouped.keys())
-    for weapon_class in weapon_classes:
-        section = _format_weapon_class_section(weapon_class, grouped[weapon_class], top_n)
+    # Display each type+class combination (only those with results)
+    type_class_keys = sorted(grouped.keys())
+    for type_class_key in type_class_keys:
+        section = _format_type_class_section(type_class_key, grouped[type_class_key], top_n)
         print(section)
 
     print()
