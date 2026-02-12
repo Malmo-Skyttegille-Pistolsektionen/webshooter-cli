@@ -22,6 +22,13 @@ from webshooter_client.api.exceptions import (
     APIClientError,
     APIRetryExhaustedError,
 )
+from webshooter_client.api.cache import (
+    load_from_cache,
+    save_to_cache,
+    get_cache_key_for_competitions,
+    get_cache_key_for_competition,
+    get_cache_key_for_page,
+)
 
 from datetime import datetime, date
 
@@ -62,7 +69,7 @@ def get_competition(competition_id: int) -> Competition:
     logging.info(f"Fetching competition: {competition_id}")
     url = BASE_URL_COMPETITION.format(competition=competition_id)
 
-    data = fetch_data(url=url)
+    data = fetch_data(url=url, cache_key=get_cache_key_for_competition(competition_id))
 
     if "competitions" not in data or data["competitions"] is None:
         raise DataValidationError(f"No competition data in response for ID {competition_id}")
@@ -94,6 +101,10 @@ def get_competitions(year: Optional[int]) -> dict[int, Competition]:
     """
     Fetch all competitions, optionally filtered by year.
 
+    Note: The API returns all competitions in one call. The year parameter
+    only filters the results client-side. The cache stores all competitions
+    regardless of the year parameter.
+
     Args:
         year: Optional year to filter competitions (e.g., 2024)
 
@@ -105,7 +116,8 @@ def get_competitions(year: Optional[int]) -> dict[int, Competition]:
     logging.info("Fetching competitions")
     url = BASE_URL_COMPETITIONS
 
-    data = fetch_data(url=url)
+    # Cache key is year-agnostic since API returns all competitions
+    data = fetch_data(url=url, cache_key=get_cache_key_for_competitions())
 
     for competition in data["competitions"]["data"]:
         if not year or competition["date"].startswith(str(year)):
@@ -137,7 +149,7 @@ def get_patrols(competition_id: int) -> List[Patrol]:
     logging.info(f"Fetching competion patrols for {competition_id}")
     url = BASE_URL_COMPETITION_PAGE.format(competition=competition_id, page="patrols")
 
-    data = fetch_data(url=url)
+    data = fetch_data(url=url, cache_key=get_cache_key_for_page(competition_id, "patrols"))
 
     patrol_objs: List[Patrol] = []
 
@@ -178,7 +190,7 @@ def get_results(competition_id: int) -> List[PrecisionResult | MilitaryResult | 
     url = BASE_URL_COMPETITION_PAGE.format(competition=competition_id, page="results")
 
     competition = get_competition(competition_id)
-    data = fetch_data(url=url)
+    data = fetch_data(url=url, cache_key=get_cache_key_for_page(competition_id, "results"))
 
     # Get appropriate parser for this competition type
     parser = ResultParserFactory.get_parser(competition.type)
@@ -205,7 +217,7 @@ def get_signups(competition_id: int) -> List[Signup]:
     logging.info(f"Fetching competition signups for {competition_id}")
     url = BASE_URL_COMPETITION_PAGE.format(competition=competition_id, page="signups?page=1&per_page=1000")
 
-    data = fetch_data(url=url)
+    data = fetch_data(url=url, cache_key=get_cache_key_for_page(competition_id, "signups?page=1&per_page=1000"))
 
     signup_objs: List[Signup] = []
 
@@ -217,15 +229,19 @@ def get_signups(competition_id: int) -> List[Signup]:
     return signup_objs
 
 
-def fetch_data(url: str, max_retries: int = 5, backoff_factor: int = 10) -> Dict[str, Any]:
+def fetch_data(  # noqa: C901
+    url: str, cache_key: Optional[str] = None, max_retries: int = 5, backoff_factor: int = 10
+) -> Dict[str, Any]:
     """
-    Fetch JSON data from the WebShooter API with retry logic.
+    Fetch JSON data from the WebShooter API with retry logic and optional caching.
 
     Automatically adds authentication headers and retries on HTTP 500 errors
-    with exponential backoff.
+    with exponential backoff. If cache is enabled and cache_key is provided,
+    will try to load from cache first, and save successful responses to cache.
 
     Args:
         url: The API endpoint URL to fetch
+        cache_key: Optional cache identifier for saving/loading cached data
         max_retries: Maximum number of retry attempts on HTTP 500 (default: 5)
         backoff_factor: Seconds to multiply by retry count for backoff (default: 10)
 
@@ -239,6 +255,12 @@ def fetch_data(url: str, max_retries: int = 5, backoff_factor: int = 10) -> Dict
         APIClientError: On HTTP 4xx errors
         APIRetryExhaustedError: If max retries exceeded
     """
+    # Try loading from cache first
+    if cache_key:
+        cached_data = load_from_cache(cache_key)
+        if cached_data is not None:
+            return cached_data
+
     headers = HEADERS.copy()
     headers["Authorization"] = f"Bearer {ApplicationConfig().token}"
 
@@ -253,7 +275,11 @@ def fetch_data(url: str, max_retries: int = 5, backoff_factor: int = 10) -> Dict
 
             # Handle HTTP response codes explicitly
             if response.status_code == 200:
-                return json.loads(response.text)
+                data = json.loads(response.text)
+                # Save to cache if cache_key provided
+                if cache_key:
+                    save_to_cache(cache_key, data)
+                return data
             elif response.status_code == 500:
                 retries += 1
                 wait_time = backoff_factor * retries

@@ -1,44 +1,47 @@
-from typing import Optional
+"""Calculate total starts command."""
 
-from webshooter_client.commands.results import ResultsCommand
-from webshooter_client.api import api_calls
-from webshooter_client.models.competition import Competition, CompetitionType
-from webshooter_client.commands.base_command import BaseCommand
+from typing import Optional
 import logging
 
+from webshooter_client.commands.results import get_results_for_competition
+from webshooter_client.api import api_calls
+from webshooter_client.models.competition import Competition, CompetitionType
+from webshooter_client.common.output_utils import print_table
 
-class StartsCommand(BaseCommand):
-    """Command to calculate total starts across competitions."""
 
-    @staticmethod
-    def get_starts_total(club: str, card: Optional[str], year: Optional[int] = None) -> None:
-        counters = {comp_type: 0 for comp_type in CompetitionType}
+def get_starts_total(club: str, card: Optional[str] = None, year: Optional[int] = None) -> None:
+    """Calculate and display total starts across competitions.
 
-        competitions: dict[int, Competition] = api_calls.get_competitions(year=year)
+    Args:
+        club: Club number to filter by
+        card: Optional shooting card number to filter by
+        year: Optional year to filter competitions
+    """
+    counters = {comp_type: 0 for comp_type in CompetitionType}
 
-        for competition in competitions.values():
-            logging.info(f"Date: {competition.competition_date} ID: {competition.id} Type: {competition.type}")
+    competitions: dict[int, Competition] = api_calls.get_competitions(year=year)
 
-            results = ResultsCommand.get_results_for_competition(competition_id=competition.id, club=club, card=card)
+    for competition in competitions.values():
+        logging.info(f"Date: {competition.competition_date} ID: {competition.id} Type: {competition.type}")
 
-            if results:
-                for card in results.keys():
-                    if card != 0:
-                        counters[competition.type] += len(results[card]["lines"])
+        results = get_results_for_competition(competition_id=competition.id, club=club, card=card)
 
-        # Prepare data for tabulate
-        table_data = []
-        table_data.append(["Club", club])
-        table_data.append(["Card", card])
-        table_data.append(["Year", year])
-        table_data.append(["", ""])
+        if results:
+            for card_key in results.keys():
+                if card_key != 0:
+                    counters[competition.type] += len(results[card_key]["lines"])
 
-        for comp_type in counters.keys():
-            table_data.append([comp_type.display_name, counters[comp_type]])
+    # Prepare data for tabulate
+    table_data = []
+    table_data.append(["Club", club])
+    table_data.append(["Card", card])
+    table_data.append(["Year", year])
+    table_data.append(["", ""])
 
-        table_data.append(["", ""])
-        table_data.append(["Total starts", sum([counters[type] for type in counters.keys()])])
+    for comp_type in counters.keys():
+        table_data.append([comp_type.display_name, counters[comp_type]])
 
-        BaseCommand.print_table(table_data, headers=[])
+    table_data.append(["", ""])
+    table_data.append(["Total starts", sum([counters[type] for type in counters.keys()])])
 
-        return
+    print_table(table_data, headers=[])

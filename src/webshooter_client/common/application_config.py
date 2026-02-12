@@ -21,17 +21,16 @@ class ApplicationConfig(metaclass=SingletonMeta):
     - Simple access pattern: ApplicationConfig()
     - Initialized once during CLI startup from configargparse
 
-    Example:
-        config = ApplicationConfig()
-        if config.verbose:
-            print("Verbose mode enabled")
-
     Attributes:
         unicode: Enable Unicode symbols in output (default: True)
         verbose: Enable verbose logging (default: False)
         token: API authentication token from webshooter.se (default: None)
+        use_cache: Use local file cache instead of API calls (default: False)
+        cache_dir: Directory for cache files (default: ~/.webshooter/cache)
     """
 
     unicode: bool = field(default=True)
     verbose: bool = field(default=False)
     token: Optional[str] = field(default=None)
+    use_cache: bool = field(default=False)
+    cache_dir: Optional[str] = field(default=None)

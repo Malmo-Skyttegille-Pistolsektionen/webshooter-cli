@@ -1,5 +1,8 @@
 """Utility functions for formatting and printing output."""
 
+from typing import List, Any
+from tabulate import tabulate
+
 from webshooter_client.models.competition import Competition
 from webshooter_client.models.signup import Signup
 
@@ -38,3 +41,14 @@ def matches_club_and_card(signup: Signup, club: str, card: str = None) -> bool:
 
     # If neither is provided, match nothing
     return False
+
+
+def print_table(data: List[List[Any]], headers: List[str], tablefmt: str = "simple") -> None:
+    """Print formatted table output.
+
+    Args:
+        data: Table data as list of rows
+        headers: Column headers
+        tablefmt: Table format (default: simple)
+    """
+    print(tabulate(data, headers=headers, tablefmt=tablefmt))

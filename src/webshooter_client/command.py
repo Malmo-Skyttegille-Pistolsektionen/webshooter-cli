@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from importlib.metadata import version
+import logging
 import os
 import sys
 
@@ -12,13 +13,7 @@ if __package__ is None or len(__package__) == 0:
 
 from webshooter_client.api import api_calls
 from webshooter_client.common.application_config import ApplicationConfig
-from webshooter_client.commands.competitions import CompetitionsCommand
-from webshooter_client.commands.medals import MedalsCommand
-from webshooter_client.commands.results import ResultsCommand
-from webshooter_client.commands.signups import SignupsCommand
-from webshooter_client.commands.start_times import StartTimesCommand
-from webshooter_client.commands.ical_export import ICalExportCommand
-from webshooter_client.commands.starts import StartsCommand
+from webshooter_client.commands import competitions, medals, results, signups, start_times, ical_export, starts
 
 
 class Command:
@@ -45,9 +40,27 @@ class Command:
         )
         self.__parser.add_argument("-u", "--unicode", help="Unicode", action="store_true", default=False)
         self.__parser.add_argument("-v", "--verbose", help="Verbose", action="store_true", default=False)
+        self.__parser.add_argument(
+            "--use-cache",
+            help="Use local file cache instead of making API calls",
+            action="store_true",
+            default=False,
+        )
+        self.__parser.add_argument(
+            "--cache-dir",
+            help="Cache directory path (default: $XDG_CACHE_HOME/webshooter or ~/.cache/webshooter)",
+            type=str,
+            default=None,
+        )
+        self.__parser.add_argument(
+            "--clear-cache",
+            help="Clear all cached data and exit",
+            action="store_true",
+            default=False,
+        )
         self.__parser.add_argument("-c", "--config", is_config_file=True, help="Config file path")
 
-        subparsers = self.__parser.add_subparsers(dest="command", required=True)
+        subparsers = self.__parser.add_subparsers(dest="command", required=False)
 
         # can specify a particular competion
 
@@ -133,19 +146,19 @@ def _normalize_card_club_args(args):
 def _execute_command(command, args):
     """Execute the appropriate command based on args."""
     if command == "signups":
-        SignupsCommand.get_signups(competition_id=args.competition, club=args.club, card=args.card)
+        signups.get_signups(competition_id=args.competition, club=args.club, card=args.card)
     elif command == "starttimes":
-        StartTimesCommand.get_starttimes(competition_id=args.competition, club=args.club, card=args.card)
+        start_times.get_starttimes(competition_id=args.competition, club=args.club, card=args.card)
     elif command == "ical":
-        ICalExportCommand().export_starttimes(competition_id=args.competition, club=args.club, card=args.card)
+        ical_export.export_starttimes(competition_id=args.competition, club=args.club, card=args.card)
     elif command == "results":
-        ResultsCommand.get_results_for_competition(competition_id=args.competition, club=args.club, card=args.card)
+        results.get_results_for_competition(competition_id=args.competition, club=args.club, card=args.card)
     elif command == "medals":
-        MedalsCommand.get_medals(club=args.club, card=args.card, year=args.year)
+        medals.get_medals(club=args.club, card=args.card, year=args.year)
     elif command == "starts":
-        StartsCommand.get_starts_total(club=args.club, card=args.card, year=args.year)
+        starts.get_starts_total(club=args.club, card=args.card, year=args.year)
     elif command == "competitions":
-        CompetitionsCommand.get_competitions(year=args.year)
+        competitions.get_competitions(year=args.year)
     elif command == "exit":
         sys.exit(1)
     else:
@@ -157,7 +170,29 @@ def main():
     command = Command()
     args = command.get_arguments()
 
-    ApplicationConfig(token=args.token, unicode=args.unicode, verbose=args.verbose)
+    # Configure logging based on verbose flag
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING, format="%(levelname)s: %(message)s")
+
+    # Initialize config (needed for cache_dir in --clear-cache)
+    ApplicationConfig(
+        token=args.token,
+        unicode=args.unicode,
+        verbose=args.verbose,
+        use_cache=args.use_cache,
+        cache_dir=args.cache_dir,
+    )
+
+    # Handle --clear-cache before normal command execution
+    if args.clear_cache:
+        from webshooter_client.api.cache import clear_cache, _get_cache_dir
+
+        deleted_count = clear_cache()
+        cache_dir_display = _get_cache_dir()
+        if deleted_count > 0:
+            print(f"Cleared {deleted_count} cache file{'s' if deleted_count != 1 else ''} from {cache_dir_display}")
+        else:
+            print(f"No cache files to clear in {cache_dir_display}")
+        sys.exit(0)
 
     _normalize_card_club_args(args)
 
