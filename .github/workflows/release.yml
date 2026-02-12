@@ -120,6 +120,7 @@ jobs:
     - name: Upload wheel and update release with changelog
       uses: softprops/action-gh-release@v2
       with:
+        name: ${{ github.ref_name }}
         files: dist/*
         body: ${{ needs.generate-changelog.outputs.changelog }}
       env:
