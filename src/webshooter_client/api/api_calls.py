@@ -197,6 +197,11 @@ def get_results(competition_id: int) -> List[PrecisionResult | MilitaryResult | 
 
     results: List[PrecisionResult | MilitaryResult | FieldResult] = []
     for result in data.get("results", []):
+        # Skip results with no signup data (can happen in older competitions)
+        if result.get("signup") is None:
+            logging.warning(f"Skipping result for competition {competition_id}: missing signup data")
+            continue
+
         result["signup"]["weaponclass"] = result["weaponclass"]
         signup_obj: Signup = create_signup_obj(result["signup"])
         results.append(parser.parse(result, signup_obj))
