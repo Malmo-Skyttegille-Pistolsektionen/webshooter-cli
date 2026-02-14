@@ -1,5 +1,6 @@
 """Display personal best results for a shooter."""
 
+import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
@@ -92,6 +93,7 @@ def _fetch_all_personal_bests(year: int, card: str) -> List[PersonalBest]:
             f"\rFetching competition {i}/{len(relevant_competitions)}...",
             end="",
             flush=True,
+            file=sys.stderr,
         )
         results = get_results(competition_id=competition.id)
 
@@ -100,7 +102,7 @@ def _fetch_all_personal_bests(year: int, card: str) -> List[PersonalBest]:
             if pb:
                 personal_bests.append(pb)
 
-    print()  # New line after progress indicator
+    print(file=sys.stderr)  # New line after progress indicator
     return personal_bests
 
 
@@ -156,16 +158,16 @@ def get_personal_bests(card: str, year: int, top_n: int = 10) -> None:
         year: Year to analyze
         top_n: Number of top results to show per weapon class (default: 10)
     """
-    print(f"Personal Bests for Card: {card}")
-    print(f"Year: {year}")
-    print("Competition Types: Precision, Militär snabbmatch")
-    print()
+    print(f"Personal Bests for Card: {card}", file=sys.stderr)
+    print(f"Year: {year}", file=sys.stderr)
+    print("Competition Types: Precision, Militär snabbmatch", file=sys.stderr)
+    print(file=sys.stderr)
 
     # Fetch all personal bests
     personal_bests = _fetch_all_personal_bests(year, card)
 
     if not personal_bests:
-        print(f"No results found for card {card} in {year}")
+        print(f"No results found for card {card} in {year}", file=sys.stderr)
         return
 
     # Group by competition type and weapon class
@@ -178,4 +180,4 @@ def get_personal_bests(card: str, year: int, top_n: int = 10) -> None:
         print(section)
 
     print()
-    print("Note: Only showing weapon classes where you competed.")
+    print("Note: Only showing weapon classes where you competed.", file=sys.stderr)
