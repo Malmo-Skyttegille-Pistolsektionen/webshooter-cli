@@ -323,6 +323,12 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+# Anonymization secrets (NEVER commit - contains secret salt for card anonymization)
+# These files are used to create synthetic card numbers from real card numbers
+# Without these files, test data cannot be reverse-engineered
+.webshooter/card_anonymization_salt.txt
+.webshooter/card_mapping.json
+
 ### Python Patch ###
 # Poetry local configuration file - https://python-poetry.org/docs/configuration/#local-configuration
 poetry.toml

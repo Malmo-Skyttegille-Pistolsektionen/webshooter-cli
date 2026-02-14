@@ -164,10 +164,8 @@ class TestGetCompetitionWithCache:
 
         competition_id = 149
 
-        # Load real test data
-        with open(
-            testdata_resources_rootdir_w_path(f"competitions/{competition_id}/competition_{competition_id}.json")
-        ) as f:
+        # Load real test data (flat structure like cache)
+        with open(testdata_resources_rootdir_w_path(f"competitions/competition_{competition_id}.json")) as f:
             competition_data = json.load(f)
 
         with patch("webshooter_client.api.api_calls.fetch_data") as mock_fetch:
