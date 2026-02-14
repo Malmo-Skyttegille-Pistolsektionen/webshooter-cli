@@ -2,8 +2,9 @@ name: Release
 
 on:
   workflow_dispatch:
-  release:
-    types: [published]
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'  # Semantic versions like 1.1.2
 
 permissions:
   contents: write
@@ -83,7 +84,6 @@ jobs:
     name: Generate changelog with git-cliff
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
     permissions:
       contents: read
       pull-requests: read
@@ -110,7 +110,6 @@ jobs:
     name: Upload release assets and update description
     needs: [build, generate-changelog]
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
     
     steps:
     - name: Download artifacts
