@@ -33,11 +33,13 @@ def test_stats_command_all_years():
     assert result.returncode == 0, f"Command failed: {result.stderr}"
     output = result.stdout + result.stderr
 
-    # Check output contains tabular format elements
-    assert "Year-by-Year Statistics" in output or "Card" in output or "Year" in output
-    assert synthetic_card in output or "2024" in output or "Precision" in output
-    # Should show table header
-    assert "Year" in output or "Class" in output or "Comps" in output
+    # Check output contains expected elements (not with `or` chains)
+    assert "Year-by-Year Statistics" in output
+    assert "Year" in output
+    assert "Class" in output
+    assert "Comps" in output
+    # Card should appear or synthetic card itself
+    assert synthetic_card in output or "2024" in output
     # Should not have errors
     assert "Error" not in result.stderr or "No results" in result.stderr
     assert "Traceback" not in result.stderr

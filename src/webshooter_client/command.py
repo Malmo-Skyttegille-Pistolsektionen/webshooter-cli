@@ -7,7 +7,6 @@ import sys
 
 import configargparse
 
-
 if __package__ is None or len(__package__) == 0:
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -142,7 +141,9 @@ class Command:
         )
         parser_stats.add_argument("--card", help="Pistolskyttekort number, e.g. 12345", required=True)
         year_group = parser_stats.add_mutually_exclusive_group(required=True)
-        year_group.add_argument("--all-years", help="Show all available years (2022-2025)", action="store_true")
+        year_group.add_argument(
+            "--all-years", help="Fetch all available years from 2000 to current year", action="store_true"
+        )
         year_group.add_argument(
             "--years",
             help="Specific years to show (e.g., --years 2023 2024 2025)",

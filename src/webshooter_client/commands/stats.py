@@ -2,23 +2,38 @@
 
 import sys
 from collections import defaultdict
+from datetime import date
 from typing import Dict, List, Optional
 
 from tabulate import tabulate
 
-from webshooter_client.api.api_calls import get_competitions, get_results
 from webshooter_client.common.competition_filter import (
     is_valid_precision_result,
     is_valid_military_result,
 )
+from webshooter_client.common.fetch_utils import fetch_results_for_card
 from webshooter_client.models.competition import CompetitionType
 from webshooter_client.models.result import PrecisionResult, MilitaryResult
 from webshooter_client.stats.calculator import (
     calculate_yearly_stats,
     calculate_trend,
     get_num_series,
+    get_weapon_group,
 )
 from webshooter_client.stats.models import YearlyStats
+
+
+def _result_filter(result) -> bool:
+    """Filter function for valid precision/military results with series."""
+    if not result.series:
+        return False
+
+    if isinstance(result, PrecisionResult):
+        return is_valid_precision_result(result)
+    elif isinstance(result, MilitaryResult):
+        return is_valid_military_result(result)
+
+    return False
 
 
 def _fetch_all_results_for_years(years: List[int], card: str) -> Dict[int, List[PrecisionResult | MilitaryResult]]:
@@ -34,44 +49,13 @@ def _fetch_all_results_for_years(years: List[int], card: str) -> Dict[int, List[
     Returns:
         Dictionary mapping year to list of valid results
     """
-    results_by_year = defaultdict(list)
-    total_comps = 0
-
-    # Count total competitions first
-    for year in years:
-        comps_dict = get_competitions(year=year)
-        comps = [c for c in comps_dict.values() if c.type in (CompetitionType.PRECISION, CompetitionType.MILITARY)]
-        total_comps += len(comps)
-
-    comp_count = 0
-    for year in years:
-        comps_dict = get_competitions(year=year)
-        comps = [c for c in comps_dict.values() if c.type in (CompetitionType.PRECISION, CompetitionType.MILITARY)]
-
-        for competition in comps:
-            comp_count += 1
-            print(
-                f"\rFetching competition {comp_count}/{total_comps}...",
-                end="",
-                flush=True,
-                file=sys.stderr,
-            )
-            results = get_results(competition_id=competition.id)
-
-            # Filter results for the card using shared validation
-            for result in results:
-                if result.signup.shooting_card_number != card or not result.series:
-                    continue
-
-                if isinstance(result, PrecisionResult):
-                    if is_valid_precision_result(result):
-                        results_by_year[year].append(result)
-                elif isinstance(result, MilitaryResult):
-                    if is_valid_military_result(result):
-                        results_by_year[year].append(result)
-
-    print(file=sys.stderr)  # New line after progress
-    return dict(results_by_year)
+    return fetch_results_for_card(
+        years=years,
+        card=card,
+        competition_types={CompetitionType.PRECISION, CompetitionType.MILITARY},
+        result_filter=_result_filter,
+        show_progress=True,
+    )
 
 
 def _group_results_by_type_and_group(
@@ -88,7 +72,7 @@ def _group_results_by_type_and_group(
         comp_type = "Precision" if isinstance(result, PrecisionResult) else "Militär snabbmatch"
 
         # Extract weapon group from class (e.g., "C3" -> "C")
-        weapon_group = result.signup.weapon_class[0] if result.signup.weapon_class else "?"
+        weapon_group = get_weapon_group(result.signup.weapon_class)
 
         key = f"{comp_type} - Weapon Group {weapon_group}"
         grouped[key].append(result)
@@ -194,8 +178,9 @@ def get_yearly_stats(
     years_to_fetch = []
 
     if all_years:
-        # Fetch all years in range 2022-2025
-        years_to_fetch = list(range(2022, 2026))
+        # Dynamically use current year as upper bound (was hardcoded to 2026)
+        # Range from 2000 (reasonable historical limit) to current year
+        years_to_fetch = list(range(2000, date.today().year + 1))
     elif years:
         years_to_fetch = years
     elif from_year is not None and to_year is not None:

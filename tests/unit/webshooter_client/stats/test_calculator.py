@@ -7,11 +7,8 @@ from webshooter_client.models.result import PrecisionResult, MilitaryResult, Fie
 from webshooter_client.stats.calculator import (
     calculate_basic_stats,
     calculate_series_stats,
-    group_results_by_weapon_group,
-    group_results_by_year,
     get_num_series,
     calculate_yearly_stats,
-    calculate_year_over_year,
     calculate_trend,
 )
 
@@ -128,50 +125,6 @@ def test_calculate_series_stats_empty():
     # All should be 0 since no results
 
 
-def test_group_results_by_weapon_group():
-    """Test grouping results by weapon group."""
-    signup_c = Mock()
-    signup_c.weapon_class = "C3"
-
-    signup_a = Mock()
-    signup_a.weapon_class = "A2"
-
-    result_c = PrecisionResult(signup=signup_c, placement=1, std_medal=None, points=325, series=[])
-    result_a = PrecisionResult(signup=signup_a, placement=2, std_medal=None, points=320, series=[])
-
-    grouped = group_results_by_weapon_group([result_c, result_a])
-
-    assert "C" in grouped
-    assert "A" in grouped
-    assert len(grouped["C"]) == 1
-    assert len(grouped["A"]) == 1
-
-
-def test_group_results_by_year():
-    """Test grouping results by year."""
-    from datetime import date
-
-    signup_2023 = Mock()
-    signup_2023.weapon_class = "C3"
-    signup_2023.competition = Mock()
-    signup_2023.competition.competition_date = date(2023, 7, 10)
-
-    signup_2024 = Mock()
-    signup_2024.weapon_class = "C3"
-    signup_2024.competition = Mock()
-    signup_2024.competition.competition_date = date(2024, 7, 10)
-
-    result_2023 = PrecisionResult(signup=signup_2023, placement=1, std_medal=None, points=300, series=[])
-    result_2024 = PrecisionResult(signup=signup_2024, placement=1, std_medal=None, points=310, series=[])
-
-    grouped = group_results_by_year([result_2023, result_2024])
-
-    assert 2023 in grouped
-    assert 2024 in grouped
-    assert len(grouped[2023]) == 1
-    assert len(grouped[2024]) == 1
-
-
 def test_get_num_series():
     """Test num_series detection for different result types."""
     precision = PrecisionResult(signup=None, placement=0, std_medal=None, points=0, series=[])
@@ -186,61 +139,13 @@ def test_get_num_series():
 def test_calculate_yearly_stats():
     """Test yearly stats calculation."""
     results = [create_precision_result(points) for points in range(300, 310)]
-    yearly_stats = calculate_yearly_stats(results, year=2024, num_series=7)
+    yearly_stats = calculate_yearly_stats(results, year=2024, num_series=7, compute_series_stats=True)
 
     assert yearly_stats.year == 2024
     assert yearly_stats.weapon_class == "C3"
     assert yearly_stats.weapon_group == "C"
     assert yearly_stats.basic_stats.count == 10
     assert len(yearly_stats.series_stats.series_averages) == 7
-
-
-def test_calculate_year_over_year():
-    """Test year-over-year comparison calculation."""
-    from datetime import date
-
-    signup_2023 = Mock()
-    signup_2023.weapon_class = "C2"
-    signup_2023.competition = Mock()
-    signup_2023.competition.competition_date = date(2023, 7, 10)
-
-    # 7 series × 43 points = 301 (sum of series)
-    result_2023 = PrecisionResult(
-        signup=signup_2023,
-        placement=1,
-        std_medal=None,
-        points=301,
-        series=[SeriesResult(points=43, inner_tens=1) for _ in range(7)],
-    )
-
-    signup_2024 = Mock()
-    signup_2024.weapon_class = "C3"
-    signup_2024.competition = Mock()
-    signup_2024.competition.competition_date = date(2024, 7, 10)
-
-    # 7 series × 45 points = 315 (sum of series)
-    result_2024 = PrecisionResult(
-        signup=signup_2024,
-        placement=1,
-        std_medal=None,
-        points=315,
-        series=[SeriesResult(points=45, inner_tens=1) for _ in range(7)],
-    )
-
-    yearly_stats = {
-        2023: calculate_yearly_stats([result_2023], 2023, 7),
-        2024: calculate_yearly_stats([result_2024], 2024, 7),
-    }
-
-    comparisons = calculate_year_over_year(yearly_stats)
-
-    assert len(comparisons) == 1
-    comparison = comparisons[0]
-    assert comparison.from_year == 2023
-    assert comparison.to_year == 2024
-    assert comparison.absolute_change == pytest.approx(14.0)  # 315 - 301
-    assert comparison.percent_change == pytest.approx(4.65, abs=0.1)  # (14 / 301) * 100
-    assert comparison.class_progression == "C2→C3"
 
 
 def test_calculate_trend_single_year():
@@ -266,8 +171,8 @@ def test_calculate_trend_no_change():
     )
 
     yearly_stats = {
-        2022: calculate_yearly_stats([result], 2022, 7),
-        2024: calculate_yearly_stats([result], 2024, 7),
+        2022: calculate_yearly_stats([result], 2022, 7, compute_series_stats=True),
+        2024: calculate_yearly_stats([result], 2024, 7, compute_series_stats=True),
     }
 
     trend = calculate_trend(yearly_stats)
@@ -305,8 +210,8 @@ def test_calculate_trend_positive_change():
     )
 
     yearly_stats = {
-        2022: calculate_yearly_stats([result_2022], 2022, 7),
-        2024: calculate_yearly_stats([result_2024], 2024, 7),
+        2022: calculate_yearly_stats([result_2022], 2022, 7, compute_series_stats=True),
+        2024: calculate_yearly_stats([result_2024], 2024, 7, compute_series_stats=True),
     }
 
     trend = calculate_trend(yearly_stats)

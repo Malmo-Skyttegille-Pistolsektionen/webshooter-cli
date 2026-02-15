@@ -5,7 +5,20 @@ from typing import Dict, List, Union
 
 from webshooter_client.common.competition_filter import get_result_points
 from webshooter_client.models.result import MilitaryResult, PrecisionResult, FieldResult
-from webshooter_client.stats.models import BasicStats, SeriesStats, YearlyStats, YoYComparison
+from webshooter_client.stats.models import BasicStats, SeriesStats, YearlyStats
+
+
+def get_weapon_group(weapon_class: str) -> str:
+    """Extract weapon group from weapon class.
+
+    Args:
+        weapon_class: Weapon class string (e.g., "C3", "A1", "R2")
+
+    Returns:
+        First character of weapon_class, or "?" if empty/None
+
+    """
+    return weapon_class[0] if weapon_class else "?"
 
 
 ResultType = Union[PrecisionResult, MilitaryResult, FieldResult]
@@ -32,7 +45,7 @@ def calculate_basic_stats(results: List[ResultType]) -> BasicStats:
 
     xs = [sum(s.inner_tens for s in r.series) for r in results if hasattr(r, "series")]
 
-    count = len(results)
+    count = len(points)
     mean = statistics.mean(points) if points else 0.0
     median = statistics.median(points) if points else 0.0
     stdev = statistics.stdev(points) if len(points) > 1 else 0.0
@@ -90,59 +103,6 @@ def calculate_series_stats(results: List[ResultType], num_series: int) -> Series
     )
 
 
-def group_results_by_weapon_group(results: List[ResultType]) -> Dict[str, List[ResultType]]:
-    """Group results by weapon group (extracted from weapon_class).
-
-    Args:
-        results: List of result objects
-
-    Returns:
-        Dictionary mapping weapon group (e.g., "C", "A") to results
-
-    """
-    grouped: Dict[str, List[ResultType]] = {}
-
-    for result in results:
-        if hasattr(result, "signup"):
-            weapon_class = result.signup.weapon_class
-            # Extract group: "C3" -> "C", "A1" -> "A", "R2" -> "R"
-            weapon_group = weapon_class[0] if weapon_class else "?"
-        else:
-            weapon_group = "?"
-
-        if weapon_group not in grouped:
-            grouped[weapon_group] = []
-        grouped[weapon_group].append(result)
-
-    return grouped
-
-
-def group_results_by_year(results: List[ResultType]) -> Dict[int, List[ResultType]]:
-    """Group results by year (extracted from competition date).
-
-    Args:
-        results: List of result objects (must have signup with competition)
-
-    Returns:
-        Dictionary mapping year to results
-
-    """
-    grouped: Dict[int, List[ResultType]] = {}
-
-    for result in results:
-        if hasattr(result, "signup") and hasattr(result.signup, "competition"):
-            year = result.signup.competition.competition_date.year
-        else:
-            year = 0
-
-        if year > 0:
-            if year not in grouped:
-                grouped[year] = []
-            grouped[year].append(result)
-
-    return grouped
-
-
 def get_num_series(result: ResultType) -> int:
     """Determine number of series for a result type.
 
@@ -161,13 +121,16 @@ def get_num_series(result: ResultType) -> int:
         return 0  # Field results don't use series
 
 
-def calculate_yearly_stats(results: List[ResultType], year: int, num_series: int) -> YearlyStats:
+def calculate_yearly_stats(
+    results: List[ResultType], year: int, num_series: int, compute_series_stats: bool = False
+) -> YearlyStats:
     """Calculate statistics for results in a single year.
 
     Args:
         results: Results for the year
         year: Year value
         num_series: Number of series (7 or 12)
+        compute_series_stats: If False (default), series_stats will be empty to save computation
 
     Returns:
         YearlyStats object
@@ -178,13 +141,13 @@ def calculate_yearly_stats(results: List[ResultType], year: int, num_series: int
     if results and hasattr(results[0], "signup"):
         weapon_class = results[0].signup.weapon_class
 
-    weapon_group = weapon_class[0] if weapon_class else "?"
+    weapon_group = get_weapon_group(weapon_class)
 
     basic_stats = calculate_basic_stats(results)
     series_stats = (
         calculate_series_stats(results, num_series)
-        if num_series > 0
-        else (SeriesStats(series_averages={}, strongest_series=0, weakest_series=0, strongest_avg=0.0, weakest_avg=0.0))
+        if compute_series_stats and num_series > 0
+        else SeriesStats(series_averages={}, strongest_series=0, weakest_series=0, strongest_avg=0.0, weakest_avg=0.0)
     )
 
     return YearlyStats(
@@ -194,51 +157,6 @@ def calculate_yearly_stats(results: List[ResultType], year: int, num_series: int
         basic_stats=basic_stats,
         series_stats=series_stats,
     )
-
-
-def calculate_year_over_year(yearly_stats: Dict[int, YearlyStats]) -> List[YoYComparison]:
-    """Calculate year-over-year comparisons between consecutive years.
-
-    Args:
-        yearly_stats: Dictionary mapping year to YearlyStats
-
-    Returns:
-        List of YoYComparison objects for consecutive years
-
-    """
-    comparisons = []
-    sorted_years = sorted(yearly_stats.keys())
-
-    for i in range(len(sorted_years) - 1):
-        from_year = sorted_years[i]
-        to_year = sorted_years[i + 1]
-        from_stats = yearly_stats[from_year]
-        to_stats = yearly_stats[to_year]
-
-        from_mean = from_stats.basic_stats.mean
-        to_mean = to_stats.basic_stats.mean
-
-        absolute_change = to_mean - from_mean
-        percent_change = (absolute_change / from_mean * 100) if from_mean != 0 else 0.0
-
-        # Track class progression
-        class_progression = ""
-        if from_stats.weapon_class != to_stats.weapon_class:
-            class_progression = f"{from_stats.weapon_class}→{to_stats.weapon_class}"
-
-        comparisons.append(
-            YoYComparison(
-                from_year=from_year,
-                to_year=to_year,
-                from_stats=from_stats,
-                to_stats=to_stats,
-                absolute_change=absolute_change,
-                percent_change=percent_change,
-                class_progression=class_progression,
-            )
-        )
-
-    return comparisons
 
 
 def calculate_trend(yearly_stats: Dict[int, YearlyStats]) -> float:
