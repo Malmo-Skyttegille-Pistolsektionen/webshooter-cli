@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 from tabulate import tabulate
 
 from webshooter_client.api.api_calls import get_competitions, get_results
+from webshooter_client.common.competition_filter import is_valid_precision_result, get_result_points
 from webshooter_client.models.competition import Competition, CompetitionType
 from webshooter_client.models.result import PrecisionResult, MilitaryResult, ResultBase, SeriesResult
 
@@ -55,16 +56,15 @@ def _extract_personal_best(result: ResultBase, competition: Competition, card: s
         return None
 
     # For Precision: only count competitions with exactly 7 series
-    # Use sum of series points (ignores finals that may be in total)
+    # Use shared filtering utility
     if isinstance(result, PrecisionResult):
-        if len(result.series) != 7:
+        if not is_valid_precision_result(result):
             return None
-        # Use series sum, not total points (which may include finals)
-        points = sum(s.points for s in result.series)
+        points = get_result_points(result)
         competition_type = "Precision"
     else:
         # Military: use total points as normal
-        points = result.points
+        points = get_result_points(result)
         competition_type = "Militär snabbmatch"
 
     return PersonalBest(

@@ -13,7 +13,17 @@ if __package__ is None or len(__package__) == 0:
 
 from webshooter_client.api import api_calls
 from webshooter_client.common.application_config import ApplicationConfig
-from webshooter_client.commands import bests, competitions, medals, results, signups, start_times, ical_export, starts
+from webshooter_client.commands import (
+    bests,
+    competitions,
+    medals,
+    results,
+    signups,
+    start_times,
+    ical_export,
+    starts,
+    stats,
+)
 
 
 class Command:
@@ -126,6 +136,32 @@ class Command:
         )
         parser_bests.add_argument("--card", help="Pistolskyttekort number, e.g. 12345", required=True)
 
+        parser_stats = subparsers.add_parser(
+            "stats",
+            help="Display year-by-year statistics and trends",
+        )
+        parser_stats.add_argument("--card", help="Pistolskyttekort number, e.g. 12345", required=True)
+        year_group = parser_stats.add_mutually_exclusive_group(required=True)
+        year_group.add_argument("--all-years", help="Show all available years (2022-2025)", action="store_true")
+        year_group.add_argument(
+            "--years",
+            help="Specific years to show (e.g., --years 2023 2024 2025)",
+            nargs="+",
+            type=int,
+        )
+        year_group.add_argument(
+            "--from",
+            help="Start year for range (inclusive)",
+            type=int,
+            dest="from_year",
+        )
+        parser_stats.add_argument(
+            "--to",
+            help="End year for range (inclusive)",
+            type=int,
+            dest="to_year",
+        )
+
         args = self.__parser.parse_args()
 
         return args
@@ -174,6 +210,14 @@ def _execute_command(command, args):
         competitions.get_competitions(year=args.year)
     elif command == "bests":
         bests.get_personal_bests(card=args.card, year=args.year, top_n=args.top)
+    elif command == "stats":
+        stats.get_yearly_stats(
+            card=args.card,
+            years=args.years,
+            from_year=args.from_year,
+            to_year=args.to_year,
+            all_years=args.all_years,
+        )
     elif command == "exit":
         sys.exit(1)
     else:

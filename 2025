@@ -1,0 +1,1 @@
+hatch -e dev run python src/webshooter_client/command.py --use-cache bests 2025 --card 53780 - top 5.txt
