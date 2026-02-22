@@ -385,3 +385,7 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/python,pycharm,visualstudiocode,linux,macos,windows
+
+# Generated calendar files (should not be committed)
+*.ical
+*.ics

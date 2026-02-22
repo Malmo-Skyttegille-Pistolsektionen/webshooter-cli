@@ -37,27 +37,115 @@ class Command:
 
         self.__parser = configargparse.ArgumentParser(
             default_config_files=[os.path.expanduser("~/.webshooter.rc")],
-            description="Webshooter CLI tool",
-            formatter_class=configargparse.ArgumentDefaultsRawHelpFormatter,
+            description=(
+                "Webshooter CLI - Browse Swedish shooting competition data from webshooter.se\n\n"
+                "DATA QUERIES:\n"
+                "  competitions  - List all competitions (filter by year/type)\n"
+                "  signups       - Show shooters registered for a competition\n"
+                "  results       - Display competition results and placements\n"
+                "  medals        - Count standard medals earned (Silver/Bronze)\n\n"
+                "FILTERING & ANALYSIS:\n"
+                "  starts        - Count yearly competition participation\n"
+                "  starttimes    - Show start times/schedule for a competition\n"
+                "  bests         - Display personal best scores by weapon class\n"
+                "  stats         - Year-by-year performance analysis with trends\n\n"
+                "EXPORT:\n"
+                "  ical          - Export competition start times to calendar file\n\n"
+                "For detailed help on a command: command.py COMMAND --help"
+            ),
+            epilog=(
+                "\nCOMMON OPTIONS (available on most commands):\n\n"
+                "  Filtering by shooter/club:\n"
+                "    --card XXXX           Filter by shooting card number (e.g., 12345)\n"
+                "    --club XX-XXX         Filter by club (e.g., 12-239)\n\n"
+                "  Filtering by year:\n"
+                "    --year YYYY           Filter by single year\n"
+                "    --years YYYY          Specific years (e.g., --years 2023 2024 2025)\n"
+                "    --from YYYY --to YYYY Filter by year range (inclusive)\n"
+                "    --all-years           Include all available years\n\n"
+                "COMMAND DETAILS:\n\n"
+                "  competitions [--year YYYY] [--type {Precision,Military,Fält,Poängfält}]\n"
+                "    • Lists all available competitions, searchable by year or competition type\n"
+                "    • Useful for finding competition IDs needed for other commands\n\n"
+                "  signups <competition_id> [--card XXXX] [--club XX-XXX]\n"
+                "    • Shows who is registered for a specific competition\n"
+                "    • Can filter to a specific shooter or club\n\n"
+                "  results <competition_id> [--card XXXX] [--club XX-XXX]\n"
+                "    • Displays scores and placements from a competition\n"
+                "    • Can show one shooter's results or all results by club\n\n"
+                "  starttimes <competition_id> [--card XXXX] [--club XX-XXX]\n"
+                "    • Shows when specific shooters/groups are scheduled to shoot\n"
+                "    • Useful for knowing your start time before competition day\n\n"
+                "  starts [--card XXXX | --club XX-XXX] [--year YYYY]\n"
+                "    • Count yearly competition participation (total competitions shot per year)\n"
+                "    • Shows activity level for a shooter or club per year\n\n"
+                "  bests <year> [--card XXXX] [--club XX-XXX] [--top N]\n"
+                "    • Shows personal best scores for each weapon class\n"
+                "    • Weapon classes: Precision (7-series), Military, Field, Point Field\n"
+                "    • Scores ranked by points/hits with medal status\n\n"
+                "  stats [--card XXXX] [--club XX-XXX] [--year YYYY | --all-years | --from YYYY --to YYYY]\n"
+                "    • Year-by-year performance analysis with trends\n"
+                "    • Includes averages, deviations from winners, participation counts\n\n"
+                "  medals [--card XXXX | --club XX-XXX] [--year YYYY]\n"
+                "    • Count total standard medals earned (Silver/Bronze by competition type)\n"
+                "    • Shows total medals across all competitions, or filtered by year\n"
+                "    • Standard medals: Silver and Bronze (awarded per competition result)\n"
+                "    • Useful for tracking achievement and medal progress\n\n"
+                "  ical <competition_id> [--card XXXX] [--club XX-XXX] [--output FILE]\n"
+                "    • Exports start times to .ics calendar file\n"
+                "    • Can be imported into calendar apps (Google, Outlook, Apple, etc.)\n\n"
+                "CONFIG FILE FORMAT (~/.webshooter.rc):\n\n"
+                "  [global]\n"
+                "  token = your_api_token_here\n"
+                "  card = 12345\n"
+                "  club = 12-239\n"
+                "  unicode = true\n"
+                "  use_cache = true\n"
+                "  cache_dir = /custom/cache/path\n\n"
+                "USAGE EXAMPLES:\n\n"
+                "  # Find a competition\n"
+                "  command.py competitions --year 2024\n\n"
+                "  # View results for a specific competition\n"
+                "  command.py results 288 --card 12345\n\n"
+                "  # Get personal bests for 2024\n"
+                "  command.py bests 2024 --card 12345\n\n"
+                "  # Count total medals earned\n"
+                "  command.py medals --card 12345\n\n"
+                "  # Show yearly participation\n"
+                "  command.py starts --club 12-239 --all-years\n\n"
+                "  # Analyze performance trends\n"
+                "  command.py stats --card 12345 --year 2024\n\n"
+                "  # Export calendar for competition start times\n"
+                "  command.py ical 288 --card 12345 --output my_comp.ics\n\n"
+                "CONFIGURATION PRIORITY (highest to lowest):\n"
+                "  1. Command-line arguments (override everything)\n"
+                "  2. Config file values (~/.webshooter.rc)\n"
+                "  3. Built-in defaults"
+            ),
+            formatter_class=configargparse.RawDescriptionHelpFormatter,
         )
 
         self._add_argument_version(self.__parser)
 
         self.__parser.add_argument(
             "--token",
-            help="web token, copy from Browser -> Developer Tools -> Storage -> Local Storage -> token",
+            help="API token from webshooter.se (get from: Browser DevTools → Storage → Local Storage)",
         )
-        self.__parser.add_argument("-u", "--unicode", help="Unicode", action="store_true", default=False)
-        self.__parser.add_argument("-v", "--verbose", help="Verbose", action="store_true", default=False)
+        self.__parser.add_argument(
+            "-u", "--unicode", help="Use Unicode table formatting", action="store_true", default=False
+        )
+        self.__parser.add_argument(
+            "-v", "--verbose", help="Enable verbose output and progress messages", action="store_true", default=False
+        )
         self.__parser.add_argument(
             "--use-cache",
-            help="Use local file cache instead of making API calls",
+            help="Use locally cached API responses (faster, no network required)",
             action="store_true",
             default=False,
         )
         self.__parser.add_argument(
             "--cache-dir",
-            help="Cache directory path (default: $XDG_CACHE_HOME/webshooter or ~/.cache/webshooter)",
+            help="Custom cache directory (default: ~/.cache/webshooter)",
             type=str,
             default=None,
         )
@@ -75,28 +163,28 @@ class Command:
 
         parser_signups = subparsers.add_parser(
             "signups",
-            help="List signups for a competition",
+            help="Show shooters registered for a competition",
         )
         parser_signups.add_argument("competition", help="Competition ID", type=int, default=None)
         self.add_card_and_club(parser_signups)
 
         parser_starttimes = subparsers.add_parser(
             "starttimes",
-            help="List start times for a competition",
+            help="Show start times and schedule for a competition",
         )
         parser_starttimes.add_argument("competition", help="Competition ID", type=int, default=None)
         self.add_card_and_club(parser_starttimes)
 
         parser_ical = subparsers.add_parser(
             "ical",
-            help="Save start times for a competition to an iCal file",
+            help="Export competition start times to an iCal calendar file",
         )
         parser_ical.add_argument("competition", help="Competition ID", type=int, default=None)
         self.add_card_and_club(parser_ical)
 
         parser_results = subparsers.add_parser(
             "results",
-            help="List results from a competition",
+            help="Display competition results (scores and placements)",
         )
         parser_results.add_argument("competition", help="Competition ID", type=int, default=None)
         self.add_card_and_club(parser_results)
@@ -104,27 +192,27 @@ class Command:
         # summaries
         parser_medals = subparsers.add_parser(
             "medals",
-            help="List standard medals awarded for a card",
+            help="Count standard medals earned (Silver/Bronze by competition type)",
         )
         parser_medals.add_argument("year", nargs="?", help="Optional year", type=int)
         self.add_card_and_club(parser_medals)
 
         parser_starts = subparsers.add_parser(
             "starts",
-            help="List total starts from a club",
+            help="Count yearly competition participation (by card or club)",
         )
         parser_starts.add_argument("year", nargs="?", help="Optional year", type=int)
         self.add_card_and_club(parser_starts)
 
         parser_competitions = subparsers.add_parser(
             "competitions",
-            help="List all competitions in webshooter",
+            help="List all competitions (optionally filtered by year or type)",
         )
         parser_competitions.add_argument("year", nargs="?", help="Optional year", type=int)
 
         parser_bests = subparsers.add_parser(
             "bests",
-            help="Display personal best results in Precision and Military competitions",
+            help="Display personal best scores by weapon class (Precision, Military, Field)",
         )
         parser_bests.add_argument("year", help="Year to analyze", type=int)
         parser_bests.add_argument(
@@ -137,7 +225,7 @@ class Command:
 
         parser_stats = subparsers.add_parser(
             "stats",
-            help="Display year-by-year statistics and trends",
+            help="Year-by-year performance analysis with trends and statistics",
         )
         parser_stats.add_argument("--card", help="Pistolskyttekort number, e.g. 12345", required=True)
         parser_stats.add_argument(

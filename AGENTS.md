@@ -146,6 +146,21 @@ if len(result.series) >= 7:  # Could be 8, 9, 10+ series
 - Use `result.points` directly (already correct)
 - No series count validation needed
 
+### Standard Medals (Silver & Bronze)
+
+**Standard medals** are the two qualification levels in Swedish shooting competitions:
+- **Silver (S)** - Higher qualification threshold
+- **Bronze (B)** - Lower qualification threshold
+- Awarded per competition result when a shooter meets the threshold
+- NOT the same as final placements (1st, 2nd, 3rd place)
+
+**Key Facts:**
+- Only two medal levels exist: Silver and Bronze (no Gold)
+- In models: `StdMedal` enum with `SILVER` and `BRONZE` values
+- In results: `result.std_medal` contains the medal earned, or `None` if no medal
+- Tracked by: `medals` command (counts total per shooter/club/type)
+- `result.std_medal: Optional[StdMedal]` - can be None if no medal earned
+
 ### Competition Type Detection
 
 ```python
@@ -201,6 +216,13 @@ def get_result_points(result: ResultBase) -> int:
 - Line 58-63: Has filtering but implementation unclear
 - **BUG**: Shows 452+ scores for precision (violates max 350 rule)
 - Should use shared utility to fix
+
+#### Medals Command (`src/webshooter_client/commands/medals.py`)
+- Counts standard medals earned (per card or club)
+- **Standard Medals**: Silver (S) and Bronze (B) only - NOT gold/silver/bronze
+- Displays medals per competition type and shooter
+- Optional year filtering to show medals by year
+- Format: Card Number, Name, Competition Type, Silver Count, Bronze Count
 
 #### Cache System
 - Automatic caching to `~/.cache/webshooter` (XDG compliant)
