@@ -167,10 +167,9 @@ class TestResultParsing:
 class TestSignupParsing:
     """Test signup parsing with real API data."""
 
-    @pytest.mark.skip(reason="Signups files not in cache")
     def test_parse_signups(self, load_test_data):
         """Parse signups from real API response."""
-        signups_data = load_test_data(149, "competition_149_signups.json")
+        signups_data = load_test_data(12, "competition_12_signups.json")
 
         with patch("webshooter_client.api.api_calls.fetch_data", return_value=signups_data):
             signups = get_signups(149)

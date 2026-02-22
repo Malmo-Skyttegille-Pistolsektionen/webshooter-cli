@@ -240,6 +240,17 @@ class DataAnonymizer:
 
         return {"results": [self.anonymize_result_data(r) for r in results_data["results"]]}
 
+    def anonymize_signups_file(self, signups_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Anonymize a signups JSON file."""
+        if "signups" not in signups_data:
+            return signups_data
+
+        anonymized_signups = signups_data["signups"].copy()
+        if "data" in anonymized_signups:
+            anonymized_signups["data"] = [self.anonymize_signup_data(s) for s in anonymized_signups["data"]]
+
+        return {"signups": anonymized_signups}
+
     def process_file(self, source_path: Path) -> Dict[str, Any]:
         """Read, anonymize, and return file data."""
         with open(source_path, "r", encoding="utf-8") as f:
@@ -248,6 +259,8 @@ class DataAnonymizer:
         # Determine file type and anonymize accordingly
         if "_results.json" in source_path.name:
             return self.anonymize_results_file(data)
+        elif "_signups.json" in source_path.name:
+            return self.anonymize_signups_file(data)
         elif source_path.name.startswith("competition_"):
             return self.anonymize_competition_data(data)
         else:
@@ -311,6 +324,14 @@ def organize_by_year(cache_dir: Path, output_dir: Path):
             output_results = output_dir / results_file.name
             with open(output_results, "w", encoding="utf-8") as f:
                 json.dump(anonymized_results, f, indent=2, ensure_ascii=False)
+
+        # Anonymize and copy signups file if exists
+        signups_file = cache_dir / f"competition_{comp_id}_signups.json"
+        if signups_file.exists():
+            anonymized_signups = anonymizer.process_file(signups_file)
+            output_signups = output_dir / signups_file.name
+            with open(output_signups, "w", encoding="utf-8") as f:
+                json.dump(anonymized_signups, f, indent=2, ensure_ascii=False)
 
         processed_count += 1
         if processed_count % 10 == 0:
