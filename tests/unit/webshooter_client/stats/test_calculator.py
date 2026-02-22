@@ -3,13 +3,16 @@
 import pytest
 from unittest.mock import Mock
 
-from webshooter_client.models.result import PrecisionResult, MilitaryResult, FieldResult, SeriesResult
+from webshooter_client.models.result import PrecisionResult, MilitaryResult, FieldResult, SeriesResult, StationResult
 from webshooter_client.stats.calculator import (
     calculate_basic_stats,
     calculate_series_stats,
     get_num_series,
     calculate_yearly_stats,
     calculate_trend,
+    calculate_field_station_deviations,
+    calculate_field_yearly_stats,
+    calculate_field_trend,
 )
 
 
@@ -217,3 +220,109 @@ def test_calculate_trend_positive_change():
     trend = calculate_trend(yearly_stats)
     # (315 - 294) / (2024 - 2022) = 21 / 2 = 10.5 points/year
     assert trend == pytest.approx(10.5, abs=0.1)
+
+
+def make_field_result_calc(hits_per_station: list, card: str = "10008", std_medal=None):
+    """Create FieldResult for calculator tests."""
+    signup = Mock()
+    signup.weapon_class = "C3"
+    signup.shooting_card_number = card
+    stations = [StationResult(hits=h, figure_hits=max(0, h - 1), points=h * 2) for h in hits_per_station]
+    return FieldResult(signup=signup, placement=1, std_medal=std_medal, points=sum(hits_per_station), stations=stations)
+
+
+def test_calculate_field_station_deviations_basic():
+    """Test station deviation calculation against std medal winners."""
+    my_result = make_field_result_calc([4, 5, 6, 4, 5, 6, 4, 5])
+    medal1 = make_field_result_calc([5, 6, 6, 5, 6, 6, 5, 6])
+    medal2 = make_field_result_calc([6, 5, 6, 6, 5, 6, 6, 5])
+
+    deviations, total_dev, total_figs_dev = calculate_field_station_deviations(my_result, [medal1, medal2])
+
+    # My station 1 hits = 4, medal avg = (5+6)/2 = 5.5, deviation = 4 - 5.5 = -1.5
+    assert deviations[1] == pytest.approx(-1.5, abs=0.01)
+    assert len(deviations) == 8  # 8 stations
+    assert total_dev < 0  # I'm below medal average overall
+    assert isinstance(total_figs_dev, float)  # Figures deviation returned
+
+
+def test_calculate_field_station_deviations_no_medals():
+    """Test deviation with no std medal winners returns empty dict."""
+    my_result = make_field_result_calc([5, 6, 4, 6, 5])
+
+    deviations, total_dev, total_figs_dev = calculate_field_station_deviations(my_result, [])
+
+    assert deviations == {}
+    assert total_dev == 0.0
+    assert total_figs_dev == 0.0
+
+
+def test_calculate_field_station_deviations_above_medal():
+    """Test positive deviation when shooter beats medal average."""
+    my_result = make_field_result_calc([6, 6, 6, 6])
+    medal = make_field_result_calc([4, 4, 4, 4])
+
+    deviations, total_dev, total_figs_dev = calculate_field_station_deviations(my_result, [medal])
+
+    assert all(d > 0 for d in deviations.values())
+    assert total_dev > 0
+    assert isinstance(total_figs_dev, float)
+
+
+def test_calculate_field_yearly_stats_basic():
+    """Test FieldYearlyStats calculation."""
+    my1 = make_field_result_calc([5, 6, 4, 6, 5, 6, 4, 6])  # 42 hits
+    my2 = make_field_result_calc([6, 5, 6, 4, 6, 5, 6, 4])  # 42 hits
+    medal1 = make_field_result_calc([6, 6, 6, 6, 6, 6, 6, 6])  # 48 hits
+    medal2 = make_field_result_calc([5, 5, 5, 5, 5, 5, 5, 5])  # 40 hits
+
+    comp_data = [(my1, [medal1, medal2]), (my2, [medal1, medal2])]
+    stats = calculate_field_yearly_stats(comp_data, year=2024)
+
+    assert stats is not None
+    assert stats.year == 2024
+    assert stats.num_competitions == 2
+    assert stats.weapon_class == "C3"
+    assert stats.avg_hits == pytest.approx(42.0, abs=0.1)
+    assert stats.num_with_medal_data == 2
+    # Medal avg = (48 + 40) / 2 = 44 hits, my avg = 42, total_dev = -2
+    assert stats.total_deviation == pytest.approx(-2.0, abs=0.1)
+
+
+def test_calculate_field_yearly_stats_no_medals():
+    """Test FieldYearlyStats with no medal data."""
+    my1 = make_field_result_calc([5, 5, 5, 5, 5])
+    comp_data = [(my1, [])]
+    stats = calculate_field_yearly_stats(comp_data, year=2024)
+
+    assert stats is not None
+    assert stats.num_with_medal_data == 0
+    assert stats.total_deviation == 0.0
+    assert stats.station_deviations == {}
+
+
+def test_calculate_field_yearly_stats_empty():
+    """Test FieldYearlyStats with no data returns None."""
+    stats = calculate_field_yearly_stats([], year=2024)
+    assert stats is None
+
+
+def test_calculate_field_trend():
+    """Test field trend calculation."""
+    my_2022 = make_field_result_calc([4, 4, 4, 4, 4, 4, 4, 4])  # 32 hits
+    my_2024 = make_field_result_calc([5, 5, 5, 5, 5, 5, 5, 5])  # 40 hits
+
+    stats_2022 = calculate_field_yearly_stats([(my_2022, [])], year=2022)
+    stats_2024 = calculate_field_yearly_stats([(my_2024, [])], year=2024)
+
+    trend = calculate_field_trend({2022: stats_2022, 2024: stats_2024})
+    # (40 - 32) / (2024 - 2022) = 8 / 2 = 4.0 hits/year
+    assert trend == pytest.approx(4.0, abs=0.1)
+
+
+def test_calculate_field_trend_single_year():
+    """Test field trend with single year returns 0."""
+    my1 = make_field_result_calc([5, 5, 5])
+    stats = calculate_field_yearly_stats([(my1, [])], year=2024)
+    trend = calculate_field_trend({2024: stats})
+    assert trend == 0.0

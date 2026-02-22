@@ -140,7 +140,13 @@ class Command:
             help="Display year-by-year statistics and trends",
         )
         parser_stats.add_argument("--card", help="Pistolskyttekort number, e.g. 12345", required=True)
-        year_group = parser_stats.add_mutually_exclusive_group(required=True)
+        parser_stats.add_argument(
+            "--competition",
+            help="Competition ID for single Field competition analysis (Field-specific, overrides year args)",
+            type=int,
+            default=None,
+        )
+        year_group = parser_stats.add_mutually_exclusive_group(required=False)
         year_group.add_argument(
             "--all-years", help="Fetch all available years from 2000 to current year", action="store_true"
         )
@@ -212,13 +218,19 @@ def _execute_command(command, args):
     elif command == "bests":
         bests.get_personal_bests(card=args.card, year=args.year, top_n=args.top)
     elif command == "stats":
-        stats.get_yearly_stats(
-            card=args.card,
-            years=args.years,
-            from_year=args.from_year,
-            to_year=args.to_year,
-            all_years=args.all_years,
-        )
+        if getattr(args, "competition", None) is not None:
+            stats.get_single_field_competition_analysis(
+                competition_id=args.competition,
+                card=args.card,
+            )
+        else:
+            stats.get_yearly_stats(
+                card=args.card,
+                years=args.years,
+                from_year=args.from_year,
+                to_year=getattr(args, "to_year", None),
+                all_years=args.all_years,
+            )
     elif command == "exit":
         sys.exit(1)
     else:

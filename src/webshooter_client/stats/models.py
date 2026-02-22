@@ -1,6 +1,6 @@
 """Data classes for statistics calculations."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict
 
 
@@ -37,3 +37,25 @@ class YearlyStats:
     weapon_group: str  # e.g., "C", "A", "R"
     basic_stats: BasicStats
     series_stats: SeriesStats
+
+
+@dataclass
+class FieldYearlyStats:
+    """Statistics for a single year of Field competitions."""
+
+    year: int
+    weapon_class: str
+    num_competitions: int
+    avg_hits: float
+    avg_points: float
+    # Per-station deviation from std medal winners (station index 1-based -> avg deviation)
+    # Positive = above medal average, Negative = below medal average
+    station_deviations: Dict[int, float] = field(default_factory=dict)
+    # Average total hits deviation from std medal winners across all competitions
+    total_deviation: float = 0.0
+    # Average total figures deviation from std medal winners across all competitions
+    total_figures_deviation: float = 0.0
+    # Average misses per station (6 - avg_hits_per_station)
+    avg_misses_per_station: float = 0.0
+    # Number of competitions where std medal winner data was available
+    num_with_medal_data: int = 0

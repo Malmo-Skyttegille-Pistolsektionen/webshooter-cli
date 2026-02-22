@@ -210,3 +210,140 @@ class TestCompetitionFilterIntegration:
             else:
                 points = get_result_points(result)
                 assert points is None
+
+
+def create_field_result_filter(num_stations: int = 8, hits_per_station: int = 5):
+    """Create a FieldResult for competition_filter tests."""
+    from webshooter_client.models.result import FieldResult, StationResult
+
+    signup = Mock()
+    signup.weapon_class = "C3"
+
+    stations = [
+        StationResult(hits=hits_per_station, figure_hits=hits_per_station - 1, points=hits_per_station * 2)
+        for _ in range(num_stations)
+    ]
+
+    return FieldResult(
+        signup=signup,
+        placement=1,
+        std_medal=None,
+        points=hits_per_station * num_stations,
+        stations=stations,
+    )
+
+
+class TestIsValidFieldResult:
+    """Tests for is_valid_field_result function."""
+
+    def test_valid_field_8_stations(self):
+        from webshooter_client.common.competition_filter import is_valid_field_result
+
+        assert is_valid_field_result(create_field_result_filter(num_stations=8)) is True
+
+    def test_valid_field_9_stations(self):
+        from webshooter_client.common.competition_filter import is_valid_field_result
+
+        assert is_valid_field_result(create_field_result_filter(num_stations=9)) is True
+
+    def test_valid_field_10_stations(self):
+        from webshooter_client.common.competition_filter import is_valid_field_result
+
+        assert is_valid_field_result(create_field_result_filter(num_stations=10)) is True
+
+    def test_invalid_field_empty_stations(self):
+        from webshooter_client.common.competition_filter import is_valid_field_result
+        from webshooter_client.models.result import FieldResult
+
+        signup = Mock()
+        signup.weapon_class = "C3"
+        result = FieldResult(signup=signup, placement=1, std_medal=None, points=0, stations=[])
+        assert is_valid_field_result(result) is False
+
+    def test_invalid_field_none_stations(self):
+        from webshooter_client.common.competition_filter import is_valid_field_result
+        from webshooter_client.models.result import FieldResult
+
+        signup = Mock()
+        signup.weapon_class = "C3"
+        result = FieldResult(signup=signup, placement=1, std_medal=None, points=0, stations=None)
+        assert is_valid_field_result(result) is False
+
+
+class TestGetFieldResultHelpers:
+    """Tests for get_field_result_hits, figures, and points helpers."""
+
+    def test_get_field_result_hits_sums_stations(self):
+        from webshooter_client.common.competition_filter import get_field_result_hits
+        from webshooter_client.models.result import FieldResult, StationResult
+
+        signup = Mock()
+        signup.weapon_class = "C3"
+        stations = [
+            StationResult(hits=5, figure_hits=3, points=10),
+            StationResult(hits=6, figure_hits=4, points=15),
+            StationResult(hits=4, figure_hits=2, points=8),
+        ]
+        result = FieldResult(signup=signup, placement=1, std_medal=None, points=33, stations=stations)
+        assert get_field_result_hits(result) == 15  # 5 + 6 + 4
+
+    def test_get_field_result_hits_invalid_returns_none(self):
+        from webshooter_client.common.competition_filter import get_field_result_hits
+        from webshooter_client.models.result import FieldResult
+
+        signup = Mock()
+        signup.weapon_class = "C3"
+        result = FieldResult(signup=signup, placement=1, std_medal=None, points=0, stations=[])
+        assert get_field_result_hits(result) is None
+
+    def test_get_field_result_figures(self):
+        from webshooter_client.common.competition_filter import get_field_result_figures
+        from webshooter_client.models.result import FieldResult, StationResult
+
+        signup = Mock()
+        signup.weapon_class = "C3"
+        stations = [
+            StationResult(hits=5, figure_hits=3, points=0),
+            StationResult(hits=5, figure_hits=4, points=0),
+        ]
+        result = FieldResult(signup=signup, placement=1, std_medal=None, points=0, stations=stations)
+        assert get_field_result_figures(result) == 7  # 3 + 4
+
+    def test_get_field_result_figures_handles_none(self):
+        from webshooter_client.common.competition_filter import get_field_result_figures
+        from webshooter_client.models.result import FieldResult, StationResult
+
+        signup = Mock()
+        signup.weapon_class = "C3"
+        stations = [
+            StationResult(hits=5, figure_hits=None, points=0),
+            StationResult(hits=5, figure_hits=3, points=0),
+        ]
+        result = FieldResult(signup=signup, placement=1, std_medal=None, points=0, stations=stations)
+        assert get_field_result_figures(result) == 3
+
+    def test_get_field_result_points_sums_stations(self):
+        from webshooter_client.common.competition_filter import get_field_result_points
+        from webshooter_client.models.result import FieldResult, StationResult
+
+        signup = Mock()
+        signup.weapon_class = "C3"
+        stations = [
+            StationResult(hits=5, figure_hits=3, points=10),
+            StationResult(hits=6, figure_hits=4, points=15),
+        ]
+        result = FieldResult(signup=signup, placement=1, std_medal=None, points=25, stations=stations)
+        assert get_field_result_points(result) == 25  # 10 + 15
+
+    def test_get_result_points_field_returns_total_hits(self):
+        """get_result_points for FieldResult returns total hits."""
+        result = create_field_result_filter(num_stations=8, hits_per_station=5)
+        assert get_result_points(result) == 40  # 8 × 5
+
+    def test_get_result_points_field_invalid_returns_none(self):
+        from webshooter_client.models.result import FieldResult
+
+        signup = Mock()
+        signup.weapon_class = "C3"
+        result = FieldResult(signup=signup, placement=1, std_medal=None, points=0, stations=[])
+        assert get_result_points(result) is None

@@ -17,7 +17,7 @@ Key Rule for Precision Competitions:
 
 from typing import Optional
 
-from webshooter_client.models.result import PrecisionResult, MilitaryResult, ResultBase
+from webshooter_client.models.result import PrecisionResult, MilitaryResult, FieldResult, ResultBase
 
 
 def is_valid_precision_result(result: PrecisionResult) -> bool:
@@ -79,4 +79,61 @@ def get_result_points(result: ResultBase) -> Optional[int]:
             return None
         return result.points
 
+    if isinstance(result, FieldResult):
+        if not is_valid_field_result(result):
+            return None
+        return get_field_result_hits(result)
+
     return None
+
+
+def is_valid_field_result(result: FieldResult) -> bool:
+    """Check if field result is valid for stats/bests.
+
+    Field results are valid if they have station data with at least one hit recorded.
+
+    Args:
+        result: FieldResult to validate
+
+    Returns:
+        True if result has station data, False otherwise
+    """
+    return result.stations is not None and len(result.stations) > 0
+
+
+def get_field_result_hits(result: FieldResult) -> Optional[int]:
+    """Get total hits from a field result.
+
+    Args:
+        result: FieldResult to extract hits from
+
+    Returns:
+        Total hits across all stations, or None if invalid
+    """
+    if not is_valid_field_result(result):
+        return None
+    return sum(s.hits for s in result.stations)
+
+
+def get_field_result_figures(result: FieldResult) -> int:
+    """Get total figure hits from a field result.
+
+    Args:
+        result: FieldResult to extract figures from
+
+    Returns:
+        Total figure hits across all stations
+    """
+    return sum(s.figure_hits or 0 for s in result.stations)
+
+
+def get_field_result_points(result: FieldResult) -> int:
+    """Get total points from a field result.
+
+    Args:
+        result: FieldResult to extract points from
+
+    Returns:
+        Total points across all stations
+    """
+    return sum(s.points or 0 for s in result.stations)

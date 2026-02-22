@@ -1,11 +1,11 @@
 """Statistics calculation functions for bests and stats commands."""
 
 import statistics
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Tuple, Union
 
-from webshooter_client.common.competition_filter import get_result_points
+from webshooter_client.common.competition_filter import get_result_points, get_field_result_hits
 from webshooter_client.models.result import MilitaryResult, PrecisionResult, FieldResult
-from webshooter_client.stats.models import BasicStats, SeriesStats, YearlyStats
+from webshooter_client.stats.models import BasicStats, FieldYearlyStats, SeriesStats, YearlyStats
 
 
 def get_weapon_group(weapon_class: str) -> str:
@@ -185,3 +185,157 @@ def calculate_trend(yearly_stats: Dict[int, YearlyStats]) -> float:
     absolute_change = last_mean - first_mean
 
     return absolute_change / year_range
+
+
+def calculate_field_station_deviations(
+    my_result: FieldResult,
+    medal_results: List[FieldResult],
+) -> Tuple[Dict[int, float], float, float]:
+    """Calculate per-station hit deviations from std medal winners.
+
+    Computes (my_hits_at_station - std_medal_avg_hits_at_station) for each station.
+    Positive = above std medal average, Negative = below.
+
+    Args:
+        my_result: The shooter's FieldResult for this competition
+        medal_results: All results from std medal winners (std_medal is not None) in this competition
+
+    Returns:
+        Tuple of:
+          - Dict mapping station index (1-based) to deviation
+          - Total hits deviation (my total hits - std medal avg total hits)
+          - Total figures deviation (my total figures - std medal avg total figures)
+    """
+    if not medal_results:
+        return {}, 0.0, 0.0
+
+    num_stations = len(my_result.stations)
+    station_deviations: Dict[int, float] = {}
+
+    for station_idx in range(num_stations):
+        my_hits = my_result.stations[station_idx].hits
+
+        # Average std medal winner hits at this station
+        medal_station_hits = [r.stations[station_idx].hits for r in medal_results if len(r.stations) > station_idx]
+        if not medal_station_hits:
+            continue
+
+        medal_avg = statistics.mean(medal_station_hits)
+        station_deviations[station_idx + 1] = my_hits - medal_avg
+
+    # Total hits deviation
+    my_total = get_field_result_hits(my_result) or 0
+    medal_totals = [get_field_result_hits(r) for r in medal_results if get_field_result_hits(r) is not None]
+    total_deviation = (my_total - statistics.mean(medal_totals)) if medal_totals else 0.0
+
+    # Total figures deviation
+    from webshooter_client.common.competition_filter import get_field_result_figures
+
+    my_figs = get_field_result_figures(my_result) or 0
+    medal_figs = [get_field_result_figures(r) for r in medal_results if get_field_result_figures(r) is not None]
+    total_figures_deviation = float(my_figs - statistics.mean(medal_figs)) if medal_figs else 0.0
+
+    return station_deviations, total_deviation, total_figures_deviation
+
+
+def calculate_field_yearly_stats(
+    competition_data: List[Tuple[FieldResult, List[FieldResult]]],
+    year: int,
+) -> Optional[FieldYearlyStats]:
+    """Calculate FieldYearlyStats for a set of (my_result, medal_results) pairs.
+
+    Args:
+        competition_data: List of (my_result, medal_winners_for_that_competition) pairs
+        year: Year value
+
+    Returns:
+        FieldYearlyStats or None if no data
+    """
+    if not competition_data:
+        return None
+
+    weapon_class = ""
+    if competition_data[0][0].signup:
+        weapon_class = competition_data[0][0].signup.weapon_class
+
+    num_competitions = len(competition_data)
+
+    # Aggregate per-competition stats
+    all_hits: List[int] = []
+    all_figures: List[int] = []
+    all_points: List[int] = []
+    station_deviations_accum: Dict[int, List[float]] = {}
+    total_deviations: List[float] = []
+    total_figures_deviations: List[float] = []
+    misses_per_station_list: List[float] = []
+    num_with_medal_data = 0
+
+    for my_result, medal_results in competition_data:
+        my_total_hits = get_field_result_hits(my_result) or 0
+        my_figures = sum(s.figure_hits or 0 for s in my_result.stations)
+        my_points = sum(s.points or 0 for s in my_result.stations)
+
+        all_hits.append(my_total_hits)
+        all_figures.append(my_figures)
+        all_points.append(my_points)
+
+        # Misses per station: (6 - avg_hits_per_station)
+        n_stations = len(my_result.stations)
+        if n_stations > 0:
+            avg_hits_per_station = my_total_hits / n_stations
+            misses_per_station_list.append(6.0 - avg_hits_per_station)
+
+        if medal_results:
+            num_with_medal_data += 1
+            station_devs, total_dev, total_figs_dev = calculate_field_station_deviations(my_result, medal_results)
+            total_deviations.append(total_dev)
+            total_figures_deviations.append(total_figs_dev)
+            for station_pos, dev in station_devs.items():
+                if station_pos not in station_deviations_accum:
+                    station_deviations_accum[station_pos] = []
+                station_deviations_accum[station_pos].append(dev)
+
+    # Compute averages
+    avg_hits = statistics.mean(all_hits) if all_hits else 0.0
+    avg_points = statistics.mean(all_points) if all_points else 0.0
+    avg_misses_per_station = statistics.mean(misses_per_station_list) if misses_per_station_list else 0.0
+    total_deviation = statistics.mean(total_deviations) if total_deviations else 0.0
+    total_figures_deviation = statistics.mean(total_figures_deviations) if total_figures_deviations else 0.0
+
+    station_deviations_avg = {pos: statistics.mean(devs) for pos, devs in station_deviations_accum.items()}
+
+    return FieldYearlyStats(
+        year=year,
+        weapon_class=weapon_class,
+        num_competitions=num_competitions,
+        avg_hits=avg_hits,
+        avg_points=avg_points,
+        station_deviations=station_deviations_avg,
+        total_deviation=total_deviation,
+        total_figures_deviation=total_figures_deviation,
+        avg_misses_per_station=avg_misses_per_station,
+        num_with_medal_data=num_with_medal_data,
+    )
+
+
+def calculate_field_trend(yearly_stats: Dict[int, FieldYearlyStats]) -> float:
+    """Calculate trend (avg hits per year) across multiple Field years.
+
+    Args:
+        yearly_stats: Dictionary mapping year to FieldYearlyStats
+
+    Returns:
+        Average hits change per year (slope of linear trend)
+    """
+    if len(yearly_stats) < 2:
+        return 0.0
+
+    sorted_years = sorted(yearly_stats.keys())
+    first_year = sorted_years[0]
+    last_year = sorted_years[-1]
+    year_range = last_year - first_year
+
+    if year_range == 0:
+        return 0.0
+
+    return (yearly_stats[last_year].avg_hits - yearly_stats[first_year].avg_hits) / year_range

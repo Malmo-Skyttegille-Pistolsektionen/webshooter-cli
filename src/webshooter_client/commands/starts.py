@@ -3,7 +3,6 @@
 from typing import Optional
 import logging
 
-from webshooter_client.commands.results import get_results_for_competition
 from webshooter_client.api import api_calls
 from webshooter_client.models.competition import Competition, CompetitionType
 from webshooter_client.common.output_utils import print_table
@@ -24,12 +23,16 @@ def get_starts_total(club: str, card: Optional[str] = None, year: Optional[int] 
     for competition in competitions.values():
         logging.info(f"Date: {competition.competition_date} ID: {competition.id} Type: {competition.type}")
 
-        results = get_results_for_competition(competition_id=competition.id, club=club, card=card)
+        results = api_calls.get_results(competition_id=competition.id)
 
         if results:
-            for card_key in results.keys():
-                if card_key != 0:
-                    counters[competition.type] += len(results[card_key]["lines"])
+            for result in results:
+                signup = result.signup
+                # Filter by card if provided, otherwise by club
+                if card and signup.shooting_card_number == card:
+                    counters[competition.type] += 1
+                elif not card and signup.spsf_club_number == club:
+                    counters[competition.type] += 1
 
     # Prepare data for tabulate
     table_data = []
