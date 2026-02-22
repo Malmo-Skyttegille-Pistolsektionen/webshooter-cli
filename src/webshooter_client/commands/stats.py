@@ -372,7 +372,7 @@ def get_single_field_competition_analysis(competition_id: int, card: str) -> Non
             continue
         if result.signup.shooting_card_number == card:
             my_results.append(result)
-        elif result.std_medal is not None:
+        elif result.calculated_std_medal is not None:
             medal_winners.append(result)
 
     if not my_results:
@@ -395,7 +395,7 @@ def get_single_field_competition_analysis(competition_id: int, card: str) -> Non
         my_total_figures = sum(s.figure_hits or 0 for s in my_result.stations)
 
         print(f"\nWeapon Class: {my_result.signup.weapon_class}")
-        medal_str = f", Medal: {my_result.std_medal.display_name}" if my_result.std_medal else ""
+        medal_str = f", Medal: {my_result.calculated_std_medal.display_name}" if my_result.calculated_std_medal else ""
         print(
             f"Your Result: {my_total_hits} hits, {my_total_figures} figures, Placement: {my_result.placement}{medal_str}"
         )

@@ -53,6 +53,7 @@ class TestSingleFieldCompetitionMultipleWeaponClasses:
             placement=15,
             std_medal=StdMedal.BRONZE,
             points=0,
+            calculated_std_medal=StdMedal.BRONZE,
             stations=[
                 StationResult(hits=5, figure_hits=3),
                 StationResult(hits=5, figure_hits=2),
@@ -70,6 +71,7 @@ class TestSingleFieldCompetitionMultipleWeaponClasses:
             placement=2,
             std_medal=StdMedal.SILVER,
             points=0,
+            calculated_std_medal=StdMedal.SILVER,
             stations=[
                 StationResult(hits=6, figure_hits=4),
                 StationResult(hits=5, figure_hits=3),
@@ -87,6 +89,7 @@ class TestSingleFieldCompetitionMultipleWeaponClasses:
             placement=1,
             std_medal=StdMedal.BRONZE,
             points=0,
+            calculated_std_medal=StdMedal.BRONZE,
             stations=[
                 StationResult(hits=6, figure_hits=4),
                 StationResult(hits=5, figure_hits=3),
@@ -166,6 +169,7 @@ class TestSingleFieldCompetitionMultipleWeaponClasses:
             placement=5,
             std_medal=StdMedal.BRONZE,
             points=0,
+            calculated_std_medal=StdMedal.BRONZE,
             stations=[
                 StationResult(hits=5, figure_hits=3),
                 StationResult(hits=5, figure_hits=2),
@@ -183,6 +187,7 @@ class TestSingleFieldCompetitionMultipleWeaponClasses:
             placement=1,
             std_medal=StdMedal.BRONZE,
             points=0,
+            calculated_std_medal=StdMedal.BRONZE,
             stations=[
                 StationResult(hits=6, figure_hits=4),
                 StationResult(hits=5, figure_hits=3),

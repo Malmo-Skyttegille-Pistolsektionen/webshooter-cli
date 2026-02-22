@@ -18,6 +18,7 @@ class ResultBase:
     placement: int
     std_medal: Optional[StdMedal]
     points: int
+    calculated_std_medal: Optional[StdMedal] = None
 
 
 @dataclass(kw_only=True)

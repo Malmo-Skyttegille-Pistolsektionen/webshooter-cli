@@ -72,7 +72,7 @@ def get_result_points(result: ResultBase) -> Optional[int]:
         if not is_valid_precision_result(result):
             return None
         # Use series sum only (finals NOT in series list)
-        return sum(s.points for s in result.series)
+        return sum(s.points for s in result.series if s.points is not None)
 
     if isinstance(result, MilitaryResult):
         if not is_valid_military_result(result):

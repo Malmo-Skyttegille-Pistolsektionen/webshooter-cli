@@ -1,7 +1,7 @@
 """Strategy pattern for parsing different competition result types from API."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from webshooter_client.models.result import (
     ResultBase,
@@ -124,3 +124,63 @@ class ResultParserFactory:
             ResultParser instance for the competition type
         """
         return cls._parsers.get(competition_type, GenericResultParser())
+
+    @classmethod
+    def calculate_medals_for_results(cls, results: List[ResultBase], competition_type: CompetitionType) -> None:
+        """Calculate and populate calculated_std_medal for all results.
+
+        Modifies results in place, adding calculated_std_medal field.
+
+        Args:
+            results: List of parsed result objects
+            competition_type: Type of competition
+        """
+        from webshooter_client.common.medal_calculator import (
+            calculate_medals,
+            MedalCalculationInput,
+        )
+
+        if not results:
+            return
+
+        # Build input data for medal calculator
+        results_data = []
+        weapon_groups = set()
+
+        for result in results:
+            result_dict = {"points": result.points, "signup": result.signup}
+
+            if isinstance(result, (PrecisionResult, MilitaryResult)):
+                result_dict["series"] = result.series
+            elif isinstance(result, FieldResult):
+                result_dict["stations"] = result.stations
+                # Calculate total hits for field results
+                total_hits = sum(s.hits for s in result.stations if s.hits is not None)
+                total_figures = sum(s.figure_hits or 0 for s in result.stations if s.figure_hits is not None)
+                result_dict["hits"] = total_hits
+                result_dict["figures"] = total_figures
+
+            # Extract weapon group from signup
+            weapon_class = result.signup.weapon_class
+            weapon_group = weapon_class[0] if weapon_class else "A"
+            result_dict["weapon_group"] = weapon_group
+            weapon_groups.add(weapon_group)
+
+            results_data.append(result_dict)
+
+        # Calculate medals
+        input_data = MedalCalculationInput(
+            results=results_data, competition_type=competition_type, weapon_groups=list(weapon_groups)
+        )
+        calculated_medals = calculate_medals(input_data)
+
+        # Populate calculated_std_medal in results
+        for i, result in enumerate(results):
+            result.calculated_std_medal = calculated_medals[i]
+
+            # Log discrepancies
+            if result.std_medal != result.calculated_std_medal:
+                logging.debug(
+                    f"Medal discrepancy for {result.signup.fullname}: API={result.std_medal}, "
+                    f"calculated={result.calculated_std_medal}"
+                )

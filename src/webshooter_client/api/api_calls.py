@@ -205,6 +205,9 @@ def get_results(competition_id: int) -> List[PrecisionResult | MilitaryResult | 
         signup_obj: Signup = create_signup_obj(result["signup"])
         results.append(parser.parse(result, signup_obj))
 
+    # Calculate medals for all results
+    ResultParserFactory.calculate_medals_for_results(results, competition.type)
+
     return results
 
 

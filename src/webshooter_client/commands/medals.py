@@ -39,9 +39,9 @@ def get_medals(club: str, card: Optional[str] = None, year: int = None) -> None:
                 if competition.type not in shooter_medals[key]:
                     shooter_medals[key][competition.type] = {}
 
-                if result.std_medal:
-                    current_count = shooter_medals[key][competition.type].get(result.std_medal, 0)
-                    shooter_medals[key][competition.type][result.std_medal] = current_count + 1
+                if result.calculated_std_medal:
+                    current_count = shooter_medals[key][competition.type].get(result.calculated_std_medal, 0)
+                    shooter_medals[key][competition.type][result.calculated_std_medal] = current_count + 1
 
     # Prepare data for tabulate
     table_data = []
