@@ -9,8 +9,8 @@ def test_bests_command_2024():
     """E2E test: bests command with 2024 test data."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
 
-    # Card 53780 → 10008 (from REFERENCE_CARD.txt)
-    synthetic_card = "10008"
+    # Card 53780 → 10000 (from REFERENCE_CARD.txt)
+    synthetic_card = "10000"
 
     result = subprocess.run(
         [
@@ -45,7 +45,7 @@ def test_bests_command_2024():
 def test_bests_command_2023():
     """E2E test: bests command with 2023 test data."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
-    synthetic_card = "10008"
+    synthetic_card = "10000"
 
     result = subprocess.run(
         [
@@ -99,7 +99,7 @@ def test_bests_command_no_results():
 def test_bests_command_shows_field_results():
     """E2E test: bests command shows Field competition results with hits column."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
-    synthetic_card = "10008"
+    synthetic_card = "10000"
 
     result = subprocess.run(
         [
@@ -131,9 +131,9 @@ def test_bests_command_shows_field_results():
 def test_bests_command_mixed_output_shows_both_sections():
     """E2E test: bests shows both series-based and field-based sections in same output."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
-    synthetic_card = "10008"
+    synthetic_card = "10000"
 
-    # Use a year known to have both Precision/Military AND Field results for card 10008
+    # Use a year known to have both Precision/Military AND Field results for card 10000
     result = subprocess.run(
         [
             sys.executable,

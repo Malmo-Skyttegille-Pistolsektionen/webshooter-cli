@@ -18,7 +18,7 @@ class TestSingleFieldCompetitionMultipleWeaponClasses:
         signup_c3 = Signup(
             id=1,
             spsf_club_number="12-239",
-            shooting_card_number="53780",
+            shooting_card_number="10000",
             fullname="Test Shooter",
             lane=1,
             weapon_class="C3",
@@ -28,7 +28,7 @@ class TestSingleFieldCompetitionMultipleWeaponClasses:
         signup_a3 = Signup(
             id=2,
             spsf_club_number="12-239",
-            shooting_card_number="53780",
+            shooting_card_number="10000",
             fullname="Test Shooter",
             lane=2,
             weapon_class="A3",
@@ -120,7 +120,7 @@ class TestSingleFieldCompetitionMultipleWeaponClasses:
                 return_value=[c3_result, a3_result, medal_result],
             ),
         ):
-            get_single_field_competition_analysis(competition_id=288, card="53780")
+            get_single_field_competition_analysis(competition_id=288, card="10000")
 
         captured = capsys.readouterr()
         output = captured.out
@@ -145,7 +145,7 @@ class TestSingleFieldCompetitionMultipleWeaponClasses:
         signup = Signup(
             id=1,
             spsf_club_number="12-239",
-            shooting_card_number="53780",
+            shooting_card_number="10000",
             fullname="Test Shooter",
             lane=1,
             weapon_class="C3",
@@ -214,7 +214,7 @@ class TestSingleFieldCompetitionMultipleWeaponClasses:
             patch("webshooter_client.commands.stats.get_competition", return_value=competition),
             patch("webshooter_client.commands.stats.get_results", return_value=[my_result, medal_result]),
         ):
-            get_single_field_competition_analysis(competition_id=100, card="53780")
+            get_single_field_competition_analysis(competition_id=100, card="10000")
 
         captured = capsys.readouterr()
         output = captured.out

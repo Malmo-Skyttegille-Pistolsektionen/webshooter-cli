@@ -9,8 +9,8 @@ def test_stats_command_all_years():
     """E2E test: stats command with --all-years (tabular format)."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
 
-    # Card 53780 → 10008 (from REFERENCE_CARD.txt)
-    synthetic_card = "10008"
+    # Card 53780 → 10000 (from REFERENCE_CARD.txt)
+    synthetic_card = "10000"
 
     result = subprocess.run(
         [
@@ -48,7 +48,7 @@ def test_stats_command_all_years():
 def test_stats_command_specific_years():
     """E2E test: stats command with specific years."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
-    synthetic_card = "10008"
+    synthetic_card = "10000"
 
     result = subprocess.run(
         [
@@ -77,7 +77,7 @@ def test_stats_command_specific_years():
 def test_stats_command_year_range():
     """E2E test: stats command with --from/--to."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
-    synthetic_card = "10008"
+    synthetic_card = "10000"
 
     result = subprocess.run(
         [
@@ -136,7 +136,7 @@ def test_stats_command_no_results():
 def test_stats_command_shows_field_stats():
     """E2E test: stats command shows Field competition statistics."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
-    synthetic_card = "10008"
+    synthetic_card = "10000"
 
     result = subprocess.run(
         [
@@ -169,7 +169,7 @@ def test_stats_precision_scores_not_exceeding_350():
     import re
 
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
-    synthetic_card = "10008"
+    synthetic_card = "10000"
 
     result = subprocess.run(
         [
@@ -211,7 +211,7 @@ def test_stats_precision_scores_not_exceeding_350():
 def test_stats_single_field_competition_analysis():
     """E2E test: stats --competition shows single Field competition analysis."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
-    synthetic_card = "10008"
+    synthetic_card = "10000"
 
     result = subprocess.run(
         [
@@ -248,7 +248,7 @@ def test_stats_single_field_competition_analysis():
 def test_stats_single_field_competition_multiple_weapon_classes():
     """E2E test: stats --competition shows all weapon classes for a card."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
-    synthetic_card = "10008"
+    synthetic_card = "10000"
 
     result = subprocess.run(
         [
@@ -272,7 +272,7 @@ def test_stats_single_field_competition_multiple_weapon_classes():
     assert result.returncode == 0, f"Command failed: {result.stderr}"
     assert "Traceback" not in result.stderr
     output = result.stdout
-    # Card 10008 has 2 starts in comp 124: C3 and A3
+    # Card 10000 has 2 starts in comp 124: C3 and A3
     # Should show both weapon classes
     assert "Weapon Class: C3" in output
     assert "Weapon Class: A3" in output
@@ -283,7 +283,7 @@ def test_stats_single_field_competition_multiple_weapon_classes():
 def test_stats_yearly_shows_all_weapon_classes_per_competition():
     """E2E test: yearly stats shows all weapon classes when shooter has multiple starts."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
-    synthetic_card = "10008"
+    synthetic_card = "10000"
 
     result = subprocess.run(
         [
@@ -308,7 +308,7 @@ def test_stats_yearly_shows_all_weapon_classes_per_competition():
     assert "Traceback" not in result.stderr
     output = result.stdout + result.stderr
 
-    # Card 10008 has multiple Field starts in 2024 across different weapon groups
+    # Card 10000 has multiple Field starts in 2024 across different weapon groups
     # Both C and A weapon groups should appear in output
     assert "Weapon Group C" in output or "Weapon Group A" in output
     # Should show Field stats section
@@ -318,7 +318,7 @@ def test_stats_yearly_shows_all_weapon_classes_per_competition():
 def test_stats_single_competition_rejects_non_field():
     """E2E test: --competition rejects non-Field competition with clear error message."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
-    synthetic_card = "10008"
+    synthetic_card = "10000"
 
     # Find a precision competition ID from test data
     result = subprocess.run(
@@ -347,7 +347,7 @@ def test_stats_single_competition_rejects_non_field():
 def test_stats_command_no_year_required_with_competition_flag():
     """E2E test: stats --competition can be used without year arguments."""
     test_cache = Path(__file__).parent.parent / "resources" / "test_data" / "competitions"
-    synthetic_card = "10008"
+    synthetic_card = "10000"
 
     # No --years / --all-years / --from/--to: should still work with --competition
     result = subprocess.run(
@@ -371,5 +371,5 @@ def test_stats_command_no_year_required_with_competition_flag():
 
     assert result.returncode == 0, f"Command failed: {result.stderr}"
     assert "Traceback" not in result.stderr
-    # Should show hits (comp 128 has 57 hits for card 10008)
+    # Should show hits (comp 128 has 57 hits for card 10000)
     assert "57" in result.stdout

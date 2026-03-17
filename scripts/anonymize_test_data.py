@@ -65,6 +65,9 @@ class DataAnonymizer:
         self.card_mapping = {}
         self.synthetic_counter = 10001  # Start synthetic cards at 10001
 
+        # Reserve synthetic card 10000 for developer's card 53780 (public)
+        self.card_mapping["53780"] = 10000
+
     def _get_or_create_secret_salt(self) -> str:
         """
         Get existing secret salt or create new one.
@@ -138,7 +141,7 @@ class DataAnonymizer:
 
         anonymized_name = self._anonymize_club(club.get("id", 0), club.get("name", ""))
 
-        return {
+        result = {
             "id": club["id"],
             "districts_id": club.get("districts_id"),
             "clubs_nr": club.get("clubs_nr", "000"),
@@ -151,6 +154,12 @@ class DataAnonymizer:
             "logo_url": None,
             "logo_path": None,
         }
+
+        # Preserve and anonymize nested district if present
+        if "district" in club and club["district"]:
+            result["district"] = self.anonymize_district_data(club["district"])
+
+        return result
 
     def anonymize_user_data(self, user: Dict[str, Any]) -> Dict[str, Any]:
         """Anonymize user/shooter information with synthetic card number."""
@@ -185,10 +194,38 @@ class DataAnonymizer:
         if "user" in anonymized:
             anonymized["user"] = self.anonymize_user_data(anonymized["user"])
 
+        # Anonymize club if present (PII: email, phone, address, banking)
+        if "club" in anonymized:
+            anonymized["club"] = self.anonymize_club_data(anonymized["club"])
+
         # REMOVE: note, special_wishes (may contain personal info)
         anonymized["note"] = None
         anonymized["special_wishes"] = ""
 
+        return anonymized
+
+    def anonymize_district_data(self, district: Dict[str, Any]) -> Dict[str, Any]:
+        """Anonymize district information (nested in club objects)."""
+        if not district:
+            return district
+
+        anonymized = district.copy()
+        # REMOVE: PII fields from district
+        for field in [
+            "email",
+            "phone",
+            "address_street",
+            "address_street_2",
+            "address_zipcode",
+            "address_city",
+            "address_country",
+            "address_combined",
+            "swish",
+            "bankgiro",
+            "postgiro",
+        ]:
+            if field in anonymized:
+                anonymized[field] = None
         return anonymized
 
     def anonymize_competition_data(self, comp: Dict[str, Any]) -> Dict[str, Any]:
@@ -212,12 +249,32 @@ class DataAnonymizer:
         if "results_comment" in anonymized:
             anonymized["results_comment"] = None
 
-        # REMOVE: description if it contains names
-        # For now, keep description but could be sanitized further if needed
-
         # REMOVE: google_maps (may contain location details)
         if "google_maps" in anonymized:
             anonymized["google_maps"] = None
+
+        # Anonymize organizer club if present (PII: email, phone, address, banking)
+        if "club" in anonymized and anonymized["club"]:
+            anonymized["club"] = self.anonymize_club_data(anonymized["club"])
+
+        # Anonymize invoices_recipient (club object with PII)
+        if "invoices_recipient" in anonymized and anonymized["invoices_recipient"]:
+            anonymized["invoices_recipient"] = self.anonymize_club_data(anonymized["invoices_recipient"])
+
+        # Anonymize usersignups if present (full signup objects with user + club)
+        if "usersignups" in anonymized and anonymized["usersignups"]:
+            anonymized["usersignups"] = [self.anonymize_signup_data(s) for s in anonymized["usersignups"]]
+
+        # Handle championship wrapper: nested competitions list within a championship
+        if "competitions" in anonymized and isinstance(anonymized["competitions"], list):
+            anonymized["competitions"] = [self.anonymize_competition_data(c) for c in anonymized["competitions"]]
+
+        # Handle championship object with nested competitions
+        if "championship" in anonymized and isinstance(anonymized["championship"], dict):
+            champ = anonymized["championship"].copy()
+            if "competitions" in champ and isinstance(champ["competitions"], list):
+                champ["competitions"] = [self.anonymize_competition_data(c) for c in champ["competitions"]]
+            anonymized["championship"] = champ
 
         if "competitions" in comp:
             return {"competitions": anonymized}
@@ -251,6 +308,22 @@ class DataAnonymizer:
 
         return {"signups": anonymized_signups}
 
+    def anonymize_competitions_index(self, data: Any) -> Any:
+        """Anonymize the competitions.json index file.
+
+        Structure: {"competitions": {"current_page": ..., "data": [...]}}
+        """
+        if isinstance(data, dict) and "competitions" in data:
+            competitions = data["competitions"]
+            if isinstance(competitions, dict) and "data" in competitions:
+                anonymized = competitions.copy()
+                anonymized["data"] = [self.anonymize_competition_data(comp) for comp in competitions["data"]]
+                return {"competitions": anonymized}
+        # Fallback: if it's a plain list
+        if isinstance(data, list):
+            return [self.anonymize_competition_data(comp) for comp in data]
+        return data
+
     def process_file(self, source_path: Path) -> Dict[str, Any]:
         """Read, anonymize, and return file data."""
         with open(source_path, "r", encoding="utf-8") as f:
@@ -263,8 +336,9 @@ class DataAnonymizer:
             return self.anonymize_signups_file(data)
         elif source_path.name.startswith("competition_"):
             return self.anonymize_competition_data(data)
+        elif source_path.name == "competitions.json":
+            return self.anonymize_competitions_index(data)
         else:
-            # Other files (competitions.json, etc.) - minimal processing
             return data
 
 
@@ -306,7 +380,7 @@ def organize_by_year(cache_dir: Path, output_dir: Path):
             print(f"Skipping {comp_file.name} (unknown year)")
             continue
 
-        years = [2022, 2023, 2024, 2025]
+        years = [2022, 2023, 2024, 2025, 2026]
         if year not in years:
             print(f"Skipping {comp_file.name} (year {year} not in target range)")
             continue
@@ -339,6 +413,15 @@ def organize_by_year(cache_dir: Path, output_dir: Path):
 
     print(f"✅ Processed {processed_count} competitions")
     print(f"✅ Anonymized with {len(anonymizer.club_mapping)} clubs")
+
+    # Process competitions.json index file (contains contact PII for all competitions)
+    competitions_index = cache_dir / "competitions.json"
+    if competitions_index.exists():
+        anonymized_index = anonymizer.process_file(competitions_index)
+        output_index = output_dir / "competitions.json"
+        with open(output_index, "w", encoding="utf-8") as f:
+            json.dump(anonymized_index, f, indent=2, ensure_ascii=False)
+        print("✅ Anonymized competitions.json index")
 
     # Report reference card mapping (user approved: card 53780)
     reference_synthetic = None

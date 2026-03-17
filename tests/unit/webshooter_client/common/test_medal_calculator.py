@@ -12,7 +12,6 @@ from webshooter_client.models.result import (
 from webshooter_client.models.competition import CompetitionType
 from webshooter_client.models.signup import Signup
 
-
 # Test fixtures for common data
 
 
@@ -22,7 +21,7 @@ def sample_signup():
     return Signup(
         id=1,
         spsf_club_number="12-239",
-        shooting_card_number="10008",
+        shooting_card_number="10000",
         fullname="Test Shooter",
         lane=1,
         weapon_class="A1",

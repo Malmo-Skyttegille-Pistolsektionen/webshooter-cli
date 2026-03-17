@@ -41,10 +41,10 @@ def make_field_competition(name: str = "Fält Test") -> Competition:
 
 class TestExtractFieldPersonalBest:
     def test_returns_field_personal_best_for_matching_card(self):
-        result = make_field_result("10008", [5, 6, 4, 6, 5, 6, 5, 6])
+        result = make_field_result("10000", [5, 6, 4, 6, 5, 6, 5, 6])
         comp = make_field_competition()
 
-        fpb = _extract_field_personal_best(result, comp, "10008")
+        fpb = _extract_field_personal_best(result, comp, "10000")
 
         assert fpb is not None
         assert isinstance(fpb, FieldPersonalBest)
@@ -56,35 +56,35 @@ class TestExtractFieldPersonalBest:
         result = make_field_result("99999", [5, 6, 4, 6])
         comp = make_field_competition()
 
-        fpb = _extract_field_personal_best(result, comp, "10008")
+        fpb = _extract_field_personal_best(result, comp, "10000")
         assert fpb is None
 
     def test_returns_none_for_non_field_result(self):
         from webshooter_client.models.result import PrecisionResult, SeriesResult
 
         signup = Mock()
-        signup.shooting_card_number = "10008"
+        signup.shooting_card_number = "10000"
         signup.weapon_class = "C3"
         series = [SeriesResult(points=45, inner_tens=2) for _ in range(7)]
         precision = PrecisionResult(signup=signup, placement=1, std_medal=None, points=315, series=series)
         comp = make_field_competition()
 
-        fpb = _extract_field_personal_best(precision, comp, "10008")
+        fpb = _extract_field_personal_best(precision, comp, "10000")
         assert fpb is None
 
     def test_returns_none_for_empty_stations(self):
         signup = Mock()
-        signup.shooting_card_number = "10008"
+        signup.shooting_card_number = "10000"
         signup.weapon_class = "C3"
         result = FieldResult(signup=signup, placement=1, std_medal=None, points=0, stations=[])
         comp = make_field_competition()
 
-        fpb = _extract_field_personal_best(result, comp, "10008")
+        fpb = _extract_field_personal_best(result, comp, "10000")
         assert fpb is None
 
     def test_field_personal_best_figures_and_points(self):
         signup = Mock()
-        signup.shooting_card_number = "10008"
+        signup.shooting_card_number = "10000"
         signup.weapon_class = "C3"
         stations = [
             StationResult(hits=5, figure_hits=4, points=10),
@@ -93,7 +93,7 @@ class TestExtractFieldPersonalBest:
         result = FieldResult(signup=signup, placement=2, std_medal=None, points=25, stations=stations)
         comp = make_field_competition()
 
-        fpb = _extract_field_personal_best(result, comp, "10008")
+        fpb = _extract_field_personal_best(result, comp, "10000")
 
         assert fpb is not None
         assert fpb.hits == 11  # 5 + 6
@@ -102,13 +102,13 @@ class TestExtractFieldPersonalBest:
         assert fpb.placement == 2
 
     def test_competition_type_is_display_name(self):
-        result = make_field_result("10008", [5, 6, 4, 6, 5])
+        result = make_field_result("10000", [5, 6, 4, 6, 5])
         comp = make_field_competition()
-        fpb = _extract_field_personal_best(result, comp, "10008")
+        fpb = _extract_field_personal_best(result, comp, "10000")
         assert fpb.competition_type == "Fält"
 
     def test_pointfield_competition_type(self):
-        result = make_field_result("10008", [5, 6, 4, 6, 5])
+        result = make_field_result("10000", [5, 6, 4, 6, 5])
         comp = Competition(
             id=2,
             name="Poängfält Test",
@@ -118,7 +118,7 @@ class TestExtractFieldPersonalBest:
             venue="Test",
             type=CompetitionType.POINTFIELD,
         )
-        fpb = _extract_field_personal_best(result, comp, "10008")
+        fpb = _extract_field_personal_best(result, comp, "10000")
         assert fpb.competition_type == "Poängfält"
 
 

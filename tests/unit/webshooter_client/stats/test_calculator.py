@@ -222,7 +222,7 @@ def test_calculate_trend_positive_change():
     assert trend == pytest.approx(10.5, abs=0.1)
 
 
-def make_field_result_calc(hits_per_station: list, card: str = "10008", std_medal=None):
+def make_field_result_calc(hits_per_station: list, card: str = "10000", std_medal=None):
     """Create FieldResult for calculator tests."""
     signup = Mock()
     signup.weapon_class = "C3"

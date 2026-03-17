@@ -18,7 +18,7 @@ class TestFetchFieldCompetitionResultsMultipleWeaponClasses:
         signup_c3 = Signup(
             id=1,
             spsf_club_number="12-239",
-            shooting_card_number="53780",
+            shooting_card_number="10000",
             fullname="Test Shooter",
             lane=1,
             weapon_class="C3",
@@ -28,7 +28,7 @@ class TestFetchFieldCompetitionResultsMultipleWeaponClasses:
         signup_a3 = Signup(
             id=2,
             spsf_club_number="12-239",
-            shooting_card_number="53780",
+            shooting_card_number="10000",
             fullname="Test Shooter",
             lane=2,
             weapon_class="A3",
@@ -92,7 +92,7 @@ class TestFetchFieldCompetitionResultsMultipleWeaponClasses:
                 return_value=[c3_result, a3_result, medal_result],
             ),
         ):
-            results = fetch_field_competition_results([2026], "53780", show_progress=False)
+            results = fetch_field_competition_results([2026], "10000", show_progress=False)
 
         # Verify both weapon classes are collected
         assert 2026 in results
@@ -117,7 +117,7 @@ class TestFetchFieldCompetitionResultsMultipleWeaponClasses:
         signup = Signup(
             id=1,
             spsf_club_number="12-239",
-            shooting_card_number="53780",
+            shooting_card_number="10000",
             fullname="Test Shooter",
             lane=1,
             weapon_class="C3",
@@ -172,7 +172,7 @@ class TestFetchFieldCompetitionResultsMultipleWeaponClasses:
                 return_value=[my_result, medal_result],
             ),
         ):
-            results = fetch_field_competition_results([2026], "53780", show_progress=False)
+            results = fetch_field_competition_results([2026], "10000", show_progress=False)
 
         # Should return exactly 1 result tuple
         assert 2026 in results

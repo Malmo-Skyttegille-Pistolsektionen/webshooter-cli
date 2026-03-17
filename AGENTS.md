@@ -40,7 +40,7 @@ Use these parameters for consistent testing across unit, E2E, and manual tests:
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
-| **Test Card (Synthetic)** | 10008 | Anonymized from real card 53780 |
+| **Test Card (Synthetic)** | 10000 | Anonymized from real card 53780 |
 | **Test Card (Real)** | 53780 | Real shooter data, requires GDPR handling |
 | **Test Club** | 12-239 | Malmö Skyttegille Pistolsektionen |
 | **Test Years** | 2022-2025 | Available in cached test data |
@@ -54,7 +54,7 @@ Use these parameters for consistent testing across unit, E2E, and manual tests:
 python -m webshooter_client.command \
   --use-cache \
   --cache-dir tests/resources/test_data/competitions/ \
-  <command> --card 10008 <options>
+  <command> --card 10000 <options>
 
 # With real API (requires token)
 webshooter <command> --card 53780 <options>
@@ -243,7 +243,7 @@ tests/resources/test_data/competitions/
 └── 2025/
 ```
 
-**Anonymization**: Real card 53780 → synthetic card 10008 (for GDPR compliance)
+**Anonymization**: Real card 53780 → synthetic card 10000 (for GDPR compliance)
 **Club**: 12-239 (Malmö Skyttegille Pistolsektionen)
 **Years**: 2022-2025
 **Contains**: Precision and Military competitions
@@ -252,7 +252,7 @@ tests/resources/test_data/competitions/
 
 | Card | Real | Synthetic | Years | Club | Status |
 |------|------|-----------|-------|------|--------|
-| 53780 | Real shooter | 10008 | 2022-2025 | 12-239 | In test data |
+| 53780 | Real shooter | 10000 | 2022-2025 | 12-239 | In test data |
 | 53780 | Competition 259 | B3, 2024 | Precision bug example | — | Known issue |
 
 ### Known Good Examples
@@ -281,7 +281,7 @@ tests/resources/test_data/competitions/
 python -m webshooter_client.command \
   --use-cache \
   --cache-dir tests/resources/test_data/competitions/ \
-  stats --card 10008 --all-years
+  stats --card 10000 --all-years
 ```
 
 **Verifying precision filtering fix**:
@@ -290,7 +290,7 @@ python -m webshooter_client.command \
 python -m webshooter_client.command \
   --use-cache \
   --cache-dir tests/resources/test_data/competitions/ \
-  stats --card 10008 --years 2024
+  stats --card 10000 --years 2024
 
 # Look for: "Best / Worst" columns in Precision - Weapon Group B
 # Expected: All values ≤ 350
@@ -350,7 +350,7 @@ pytest tests/unit/ --cov=src/webshooter_client --cov-report=html
 
 **Test Data Available**:
 - Years: 2022-2025
-- Test card: 53780 (anonymized to 10008 in test data)
+- Test card: 53780 (anonymized to 10000 in test data)
 - Club: 12-239 (Malmö Skyttegille Pistolsektionen)
 - Competition types: Precision, Military
 
@@ -378,7 +378,7 @@ pytest tests/e2e/test_stats_e2e.py -v --use-cache
 pytest tests/e2e/test_bests_e2e.py -v --use-cache
 
 # With specific card
-pytest tests/e2e/ -v --card 10008 --use-cache
+pytest tests/e2e/ -v --card 10000 --use-cache
 ```
 
 **Test with real API (requires token)**:
@@ -395,25 +395,25 @@ pytest tests/e2e/test_stats_e2e.py -v --from 2023 --to 2024
 
 #### Manual Testing Commands
 
-**With cached test data** (synthetic card 10008):
+**With cached test data** (synthetic card 10000):
 ```bash
 # Test stats command with all years
 python -m webshooter_client.command \
   --use-cache \
   --cache-dir tests/resources/test_data/competitions/ \
-  stats --card 10008 --all-years
+  stats --card 10000 --all-years
 
 # Test stats with year range
 python -m webshooter_client.command \
   --use-cache \
   --cache-dir tests/resources/test_data/competitions/ \
-  stats --card 10008 --from 2024 --to 2025
+  stats --card 10000 --from 2024 --to 2025
 
 # Test bests for 2024
 python -m webshooter_client.command \
   --use-cache \
   --cache-dir tests/resources/test_data/competitions/ \
-  bests 2024 --card 10008 --top 5
+  bests 2024 --card 10000 --top 5
 ```
 
 **With real API** (card 53780, club 12-239):
@@ -443,7 +443,7 @@ To verify Competition 259 B3 bug is fixed:
 python -m webshooter_client.command \
   --use-cache \
   --cache-dir tests/resources/test_data/competitions/ \
-  stats --card 10008 --years 2024
+  stats --card 10000 --years 2024
 
 # Look in output for:
 # - Precision - Weapon Group B
