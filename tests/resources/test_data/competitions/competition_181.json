@@ -1,0 +1,243 @@
+{
+  "competitions": {
+    "id": 181,
+    "championships_id": 0,
+    "is_public": 1,
+    "results_is_public": 1,
+    "patrols_is_public": 1,
+    "organizer_id": 466,
+    "organizer_type": "App\\Models\\Club",
+    "invoices_recipient_id": 466,
+    "invoices_recipient_type": "App\\Models\\Club",
+    "name": "Mörsilskottet Magnum Precision",
+    "allow_teams": 0,
+    "teams_registration_fee": 0,
+    "website": "http://www.morsilskf.se",
+    "contact_name": "Competition Organizer",
+    "contact_venue": "50m-banan, Mörsils skyttecentrum",
+    "contact_city": "Mörsil",
+    "lat": 63.3,
+    "lng": 13.65,
+    "google_maps": null,
+    "description": "Inbjudningstävling Magnum Precision. 6 serier. Prispengar.",
+    "results_type": "precision",
+    "results_prices": 1,
+    "results_comment": null,
+    "date": "2024-08-03",
+    "signups_opening_date": "2024-07-23",
+    "signups_closing_date": "2024-08-01",
+    "allow_signups_after_closing_date": 1,
+    "price_signups_after_closing_date": 0,
+    "approval_signups_after_closing_date": 0,
+    "final_time": "18:00:00",
+    "created_by": 925,
+    "pdf_logo": "club",
+    "closed_at": null,
+    "weapongroups": [
+      {
+        "id": 8,
+        "name": "M",
+        "displayname": "M"
+      }
+    ],
+    "signups_count": 9,
+    "patrols_count": 2,
+    "teams_count": 0,
+    "results_count": 9,
+    "status": "completed",
+    "status_human": "Avslutad (genomförd)",
+    "start_time_human": "10:00",
+    "final_time_human": "18:00",
+    "allow_signups_after_closing_date_human": "Efteranmälan möjlig. 0 kr avgift",
+    "translations": {
+      "patrols_name_singular": "skjutlag",
+      "patrols_name_plural": "skjutlag",
+      "patrols_list_singular": "skjutlagslista",
+      "patrols_list_plural": "skjutlagslistor",
+      "patrols_size": "antal skjutplatser",
+      "patrols_lane_singular": "skjutplats",
+      "patrols_lane_plural": "skjutplatser",
+      "stations_name_singular": "serie",
+      "stations_name_plural": "serier",
+      "results_list_singular": "resultatlista",
+      "results_list_plural": "resultatlistor",
+      "shootingcard": "skjutkort",
+      "shootingcards": "skjutkort",
+      "signups": "anmälningar"
+    },
+    "results_type_human": "Precision",
+    "available_logos": [
+      "webshooter",
+      "club"
+    ],
+    "pdf_logo_path": "/var/www/html/storage/app/public/clubs/466/morsil-skytteforenings-pistolsektion-logo.jpg",
+    "pdf_logo_url": "/storage/clubs/466/morsil-skytteforenings-pistolsektion-logo.jpg",
+    "user_roles": [],
+    "championship": null,
+    "club": {
+      "id": 466,
+      "districts_id": 24,
+      "clubs_nr": "770",
+      "name": "Club_001",
+      "user_has_role": null,
+      "address_incomplete": false,
+      "logo": null,
+      "logo_url": null,
+      "logo_path": null,
+      "district": {
+        "id": 24,
+        "districts_nr": "24",
+        "name": "Jämtlands Läns Pistolskyttekrets",
+        "phone": null,
+        "email": null,
+        "address_street": null,
+        "address_street_2": null,
+        "address_zipcode": null,
+        "address_city": null,
+        "address_country": null,
+        "bankgiro": null,
+        "postgiro": null,
+        "swish": null,
+        "logo": null,
+        "clubs_count": 15,
+        "address_combined": null,
+        "logo_url": "",
+        "logo_path": ""
+      }
+    },
+    "competitiontype": {
+      "id": 11,
+      "name": "Magnumprecision",
+      "created_at": "2021-12-30T12:19:23.000000Z",
+      "updated_at": "2021-12-30T12:19:23.000000Z",
+      "deleted_at": null
+    },
+    "usersignups": [],
+    "weaponclasses": [
+      {
+        "id": 42,
+        "weapongroups_id": 8,
+        "classname": "M1",
+        "championship": 1,
+        "classname_general": "M1",
+        "pivot": {
+          "competitions_id": 181,
+          "weaponclasses_id": 42,
+          "registration_fee": 100
+        },
+        "weapongroup": {
+          "id": 8,
+          "name": "M",
+          "displayname": "M"
+        }
+      },
+      {
+        "id": 43,
+        "weapongroups_id": 8,
+        "classname": "M2",
+        "championship": 1,
+        "classname_general": "M2",
+        "pivot": {
+          "competitions_id": 181,
+          "weaponclasses_id": 43,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 44,
+        "weapongroups_id": 8,
+        "classname": "M3",
+        "championship": 1,
+        "classname_general": "M3",
+        "pivot": {
+          "competitions_id": 181,
+          "weaponclasses_id": 44,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 45,
+        "weapongroups_id": 8,
+        "classname": "M4",
+        "championship": 1,
+        "classname_general": "M4",
+        "pivot": {
+          "competitions_id": 181,
+          "weaponclasses_id": 45,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 46,
+        "weapongroups_id": 8,
+        "classname": "M5",
+        "championship": 1,
+        "classname_general": "M5",
+        "pivot": {
+          "competitions_id": 181,
+          "weaponclasses_id": 46,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 47,
+        "weapongroups_id": 8,
+        "classname": "M6",
+        "championship": 1,
+        "classname_general": "M6",
+        "pivot": {
+          "competitions_id": 181,
+          "weaponclasses_id": 47,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 48,
+        "weapongroups_id": 8,
+        "classname": "M7",
+        "championship": 1,
+        "classname_general": "M7",
+        "pivot": {
+          "competitions_id": 181,
+          "weaponclasses_id": 48,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 49,
+        "weapongroups_id": 8,
+        "classname": "M8",
+        "championship": 1,
+        "classname_general": "M8",
+        "pivot": {
+          "competitions_id": 181,
+          "weaponclasses_id": 49,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 50,
+        "weapongroups_id": 8,
+        "classname": "M9",
+        "championship": 1,
+        "classname_general": "M9",
+        "pivot": {
+          "competitions_id": 181,
+          "weaponclasses_id": 50,
+          "registration_fee": 100
+        }
+      }
+    ],
+    "invoices_recipient": {
+      "id": 466,
+      "districts_id": 24,
+      "clubs_nr": "770",
+      "name": "Club_001",
+      "user_has_role": null,
+      "address_incomplete": false,
+      "logo": null,
+      "logo_url": null,
+      "logo_path": null
+    }
+  }
+}

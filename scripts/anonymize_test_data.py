@@ -44,6 +44,7 @@ IMPORTANT:
 
 import hashlib
 import json
+import re
 import secrets
 import shutil
 from pathlib import Path
@@ -228,6 +229,17 @@ class DataAnonymizer:
                 anonymized[field] = None
         return anonymized
 
+    @staticmethod
+    def sanitize_description(text: str) -> str:
+        """Remove PII from free-text description fields (emails, banking numbers)."""
+        if not text:
+            return text
+        # Remove email addresses
+        text = re.sub(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", "[email removed]", text)
+        # Remove bankgiro/postgiro numbers (pattern: digits with dashes like 483-3380)
+        text = re.sub(r"(?i)(bankgiro|postgiro|bg|pg|swish)\s*:?\s*[\d\s-]{5,}", r"\1 [removed]", text)
+        return text
+
     def anonymize_competition_data(self, comp: Dict[str, Any]) -> Dict[str, Any]:
         """Anonymize competition metadata."""
         if "competitions" in comp:
@@ -248,6 +260,10 @@ class DataAnonymizer:
         # REMOVE: personal notes in results_comment
         if "results_comment" in anonymized:
             anonymized["results_comment"] = None
+
+        # Sanitize description (may contain emails, banking numbers)
+        if "description" in anonymized and anonymized["description"]:
+            anonymized["description"] = self.sanitize_description(anonymized["description"])
 
         # REMOVE: google_maps (may contain location details)
         if "google_maps" in anonymized:

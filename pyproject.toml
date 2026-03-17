@@ -23,7 +23,7 @@ name = "webshooter-client"
 dynamic = ["version"]
 authors = [
     { name = "Franz Levin" },
-    { name = "Shooter_10000", email = "" },
+    { name = "Jimisola Laursen" },
 ]
 description = "A client for interacting with WebShooter.se."
 readme = "README.md"

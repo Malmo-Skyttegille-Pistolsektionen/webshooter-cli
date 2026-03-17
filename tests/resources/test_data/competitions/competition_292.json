@@ -1,0 +1,273 @@
+{
+  "competitions": {
+    "id": 292,
+    "championships_id": 0,
+    "is_public": 1,
+    "results_is_public": 1,
+    "patrols_is_public": 1,
+    "organizer_id": 171,
+    "organizer_type": "App\\Models\\Club",
+    "invoices_recipient_id": 171,
+    "invoices_recipient_type": "App\\Models\\Club",
+    "name": "Kretsfält KF 1",
+    "allow_teams": 0,
+    "teams_registration_fee": 0,
+    "website": "pk-elbogen.se",
+    "contact_name": "Competition Organizer",
+    "contact_venue": "Bödkaregårdens SKJ - PK-elbogen",
+    "contact_city": "Malmö",
+    "lat": 0,
+    "lng": 0,
+    "google_maps": null,
+    "description": "Fält 8 stationer",
+    "results_type": "field",
+    "results_prices": 0,
+    "results_comment": null,
+    "date": "2026-02-28",
+    "signups_opening_date": "2026-01-30",
+    "signups_closing_date": "2026-02-20",
+    "allow_signups_after_closing_date": 1,
+    "price_signups_after_closing_date": 20,
+    "approval_signups_after_closing_date": 1,
+    "final_time": "13:30:00",
+    "created_by": 182,
+    "pdf_logo": "webshooter",
+    "closed_at": "2026-02-21 09:18:08",
+    "weapongroups": {
+      "0": {
+        "id": 3,
+        "name": "C",
+        "displayname": "C Öppen"
+      },
+      "3": {
+        "id": 4,
+        "name": "CDam",
+        "displayname": "C Dam"
+      },
+      "6": {
+        "id": 5,
+        "name": "CJun",
+        "displayname": "C Junior"
+      },
+      "7": {
+        "id": 6,
+        "name": "CVet",
+        "displayname": "C Veteran"
+      }
+    },
+    "signups_count": 89,
+    "patrols_count": 0,
+    "teams_count": 0,
+    "results_count": 0,
+    "status": "stangd",
+    "status_human": "Stängd",
+    "start_time_human": "09:00",
+    "final_time_human": "13:30",
+    "allow_signups_after_closing_date_human": "Behöver godkännas. 20 kr avgift",
+    "translations": {
+      "patrols_name_singular": "patrull",
+      "patrols_name_plural": "patruller",
+      "patrols_list_singular": "patrullista",
+      "patrols_list_plural": "patrullistor",
+      "patrols_size": "Patrullstorlek",
+      "patrols_lane_singular": "figur",
+      "patrols_lane_plural": "figurer",
+      "stations_name_singular": "station",
+      "stations_name_plural": "stationer",
+      "results_list_singular": "resultatlista",
+      "results_list_plural": "resultatlistor",
+      "shootingcard": "skjutkort",
+      "shootingcards": "skjutkort",
+      "signups": "anmälningar"
+    },
+    "results_type_human": "Fält",
+    "available_logos": [
+      "webshooter",
+      "club"
+    ],
+    "pdf_logo_path": "/var/www/html/public/img/webshooter-new.jpg",
+    "pdf_logo_url": "/img/webshooter-new.jpg",
+    "user_roles": [],
+    "championship": null,
+    "club": {
+      "id": 171,
+      "districts_id": 12,
+      "clubs_nr": "270",
+      "name": "Club_018",
+      "user_has_role": null,
+      "address_incomplete": false,
+      "logo": null,
+      "logo_url": null,
+      "logo_path": null,
+      "district": {
+        "id": 12,
+        "districts_nr": "12",
+        "name": "Malmöhus Pistolskyttekrets",
+        "phone": null,
+        "email": null,
+        "address_street": null,
+        "address_street_2": null,
+        "address_zipcode": null,
+        "address_city": null,
+        "address_country": null,
+        "bankgiro": null,
+        "postgiro": null,
+        "swish": null,
+        "logo": null,
+        "clubs_count": 39,
+        "address_combined": null,
+        "logo_url": "",
+        "logo_path": ""
+      }
+    },
+    "competitiontype": {
+      "id": 2,
+      "name": "Fält",
+      "created_at": "2021-12-30T12:19:23.000000Z",
+      "updated_at": "2021-12-30T12:19:23.000000Z",
+      "deleted_at": null
+    },
+    "usersignups": [],
+    "weaponclasses": [
+      {
+        "id": 21,
+        "weapongroups_id": 3,
+        "classname": "C1",
+        "championship": 0,
+        "classname_general": "C",
+        "pivot": {
+          "competitions_id": 292,
+          "weaponclasses_id": 21,
+          "registration_fee": 100
+        },
+        "weapongroup": {
+          "id": 3,
+          "name": "C",
+          "displayname": "C Öppen"
+        }
+      },
+      {
+        "id": 22,
+        "weapongroups_id": 3,
+        "classname": "C2",
+        "championship": 0,
+        "classname_general": "C",
+        "pivot": {
+          "competitions_id": 292,
+          "weaponclasses_id": 22,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 23,
+        "weapongroups_id": 3,
+        "classname": "C3",
+        "championship": 1,
+        "classname_general": "C",
+        "pivot": {
+          "competitions_id": 292,
+          "weaponclasses_id": 23,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 24,
+        "weapongroups_id": 4,
+        "classname": "CD1",
+        "championship": 0,
+        "classname_general": "CD",
+        "pivot": {
+          "competitions_id": 292,
+          "weaponclasses_id": 24,
+          "registration_fee": 100
+        },
+        "weapongroup": {
+          "id": 4,
+          "name": "CDam",
+          "displayname": "C Dam"
+        }
+      },
+      {
+        "id": 25,
+        "weapongroups_id": 4,
+        "classname": "CD2",
+        "championship": 0,
+        "classname_general": "CD",
+        "pivot": {
+          "competitions_id": 292,
+          "weaponclasses_id": 25,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 26,
+        "weapongroups_id": 4,
+        "classname": "CD3",
+        "championship": 1,
+        "classname_general": "CD",
+        "pivot": {
+          "competitions_id": 292,
+          "weaponclasses_id": 26,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 27,
+        "weapongroups_id": 5,
+        "classname": "CJun",
+        "championship": 1,
+        "classname_general": "CJun",
+        "pivot": {
+          "competitions_id": 292,
+          "weaponclasses_id": 27,
+          "registration_fee": 100
+        },
+        "weapongroup": {
+          "id": 5,
+          "name": "CJun",
+          "displayname": "C Junior"
+        }
+      },
+      {
+        "id": 29,
+        "weapongroups_id": 6,
+        "classname": "CVÄ",
+        "championship": 1,
+        "classname_general": "CVÄ",
+        "pivot": {
+          "competitions_id": 292,
+          "weaponclasses_id": 29,
+          "registration_fee": 100
+        },
+        "weapongroup": {
+          "id": 6,
+          "name": "CVet",
+          "displayname": "C Veteran"
+        }
+      },
+      {
+        "id": 28,
+        "weapongroups_id": 6,
+        "classname": "CVY",
+        "championship": 0,
+        "classname_general": "CVY",
+        "pivot": {
+          "competitions_id": 292,
+          "weaponclasses_id": 28,
+          "registration_fee": 100
+        }
+      }
+    ],
+    "invoices_recipient": {
+      "id": 171,
+      "districts_id": 12,
+      "clubs_nr": "270",
+      "name": "Club_018",
+      "user_has_role": null,
+      "address_incomplete": false,
+      "logo": null,
+      "logo_url": null,
+      "logo_path": null
+    }
+  }
+}

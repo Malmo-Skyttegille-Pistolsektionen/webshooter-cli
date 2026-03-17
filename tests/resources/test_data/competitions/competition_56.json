@@ -1,0 +1,216 @@
+{
+  "competitions": {
+    "id": 56,
+    "championships_id": 0,
+    "is_public": 1,
+    "results_is_public": 1,
+    "patrols_is_public": 1,
+    "organizer_id": 12,
+    "organizer_type": "App\\Models\\District",
+    "invoices_recipient_id": 12,
+    "invoices_recipient_type": "App\\Models\\District",
+    "name": "KM Precision M-Kretsen, VPGR A & B",
+    "allow_teams": 1,
+    "teams_registration_fee": 120,
+    "website": "http://www.magnusstenbock.com",
+    "contact_name": "Competition Organizer",
+    "contact_venue": "PSKF Magnus Stenbock",
+    "contact_city": "Helsingborg",
+    "lat": 56.04,
+    "lng": 12.7,
+    "google_maps": null,
+    "description": "Kretsmästerskap i Precision",
+    "results_type": "precision",
+    "results_prices": 1,
+    "results_comment": null,
+    "date": "2022-09-03",
+    "signups_opening_date": "2022-08-25",
+    "signups_closing_date": "2022-09-01",
+    "allow_signups_after_closing_date": 1,
+    "price_signups_after_closing_date": 0,
+    "approval_signups_after_closing_date": 1,
+    "final_time": "15:00:00",
+    "created_by": 8,
+    "pdf_logo": "webshooter",
+    "closed_at": null,
+    "weapongroups": {
+      "0": {
+        "id": 1,
+        "name": "A",
+        "displayname": "Vpg A"
+      },
+      "3": {
+        "id": 2,
+        "name": "B",
+        "displayname": "Vpg B"
+      }
+    },
+    "signups_count": 48,
+    "patrols_count": 2,
+    "teams_count": 0,
+    "results_count": 46,
+    "status": "completed",
+    "status_human": "Avslutad (genomförd)",
+    "start_time_human": "09:00",
+    "final_time_human": "15:00",
+    "allow_signups_after_closing_date_human": "Behöver godkännas. 0 kr avgift",
+    "translations": {
+      "patrols_name_singular": "skjutlag",
+      "patrols_name_plural": "skjutlag",
+      "patrols_list_singular": "skjutlagslista",
+      "patrols_list_plural": "skjutlagslistor",
+      "patrols_size": "antal skjutplatser",
+      "patrols_lane_singular": "skjutplats",
+      "patrols_lane_plural": "skjutplatser",
+      "stations_name_singular": "serie",
+      "stations_name_plural": "serier",
+      "results_list_singular": "resultatlista",
+      "results_list_plural": "resultatlistor",
+      "shootingcard": "skjutkort",
+      "shootingcards": "skjutkort",
+      "signups": "anmälningar"
+    },
+    "results_type_human": "Precision",
+    "available_logos": [
+      "webshooter"
+    ],
+    "pdf_logo_path": "/var/www/html/public/img/webshooter-new.jpg",
+    "pdf_logo_url": "/img/webshooter-new.jpg",
+    "user_roles": [],
+    "championship": null,
+    "club": {
+      "id": 57,
+      "districts_id": 12,
+      "clubs_nr": "99",
+      "name": "Club_010",
+      "user_has_role": null,
+      "address_incomplete": false,
+      "logo": null,
+      "logo_url": null,
+      "logo_path": null,
+      "district": {
+        "id": 12,
+        "districts_nr": "12",
+        "name": "Malmöhus Pistolskyttekrets",
+        "phone": null,
+        "email": null,
+        "address_street": null,
+        "address_street_2": null,
+        "address_zipcode": null,
+        "address_city": null,
+        "address_country": null,
+        "bankgiro": null,
+        "postgiro": null,
+        "swish": null,
+        "logo": null,
+        "clubs_count": 39,
+        "address_combined": null,
+        "logo_url": "",
+        "logo_path": ""
+      }
+    },
+    "competitiontype": {
+      "id": 5,
+      "name": "Precision",
+      "created_at": "2021-12-30T12:19:23.000000Z",
+      "updated_at": "2021-12-30T12:19:23.000000Z",
+      "deleted_at": null
+    },
+    "usersignups": [],
+    "weaponclasses": [
+      {
+        "id": 1,
+        "weapongroups_id": 1,
+        "classname": "A1",
+        "championship": 0,
+        "classname_general": "A",
+        "pivot": {
+          "competitions_id": 56,
+          "weaponclasses_id": 1,
+          "registration_fee": 120
+        },
+        "weapongroup": {
+          "id": 1,
+          "name": "A",
+          "displayname": "Vpg A"
+        }
+      },
+      {
+        "id": 2,
+        "weapongroups_id": 1,
+        "classname": "A2",
+        "championship": 0,
+        "classname_general": "A",
+        "pivot": {
+          "competitions_id": 56,
+          "weaponclasses_id": 2,
+          "registration_fee": 120
+        }
+      },
+      {
+        "id": 3,
+        "weapongroups_id": 1,
+        "classname": "A3",
+        "championship": 1,
+        "classname_general": "A",
+        "pivot": {
+          "competitions_id": 56,
+          "weaponclasses_id": 3,
+          "registration_fee": 120
+        }
+      },
+      {
+        "id": 11,
+        "weapongroups_id": 2,
+        "classname": "B1",
+        "championship": 0,
+        "classname_general": "B",
+        "pivot": {
+          "competitions_id": 56,
+          "weaponclasses_id": 11,
+          "registration_fee": 120
+        },
+        "weapongroup": {
+          "id": 2,
+          "name": "B",
+          "displayname": "Vpg B"
+        }
+      },
+      {
+        "id": 12,
+        "weapongroups_id": 2,
+        "classname": "B2",
+        "championship": 0,
+        "classname_general": "B",
+        "pivot": {
+          "competitions_id": 56,
+          "weaponclasses_id": 12,
+          "registration_fee": 120
+        }
+      },
+      {
+        "id": 13,
+        "weapongroups_id": 2,
+        "classname": "B3",
+        "championship": 1,
+        "classname_general": "B",
+        "pivot": {
+          "competitions_id": 56,
+          "weaponclasses_id": 13,
+          "registration_fee": 120
+        }
+      }
+    ],
+    "invoices_recipient": {
+      "id": 12,
+      "districts_id": null,
+      "clubs_nr": "000",
+      "name": "Club_062",
+      "user_has_role": null,
+      "address_incomplete": false,
+      "logo": null,
+      "logo_url": null,
+      "logo_path": null
+    }
+  }
+}

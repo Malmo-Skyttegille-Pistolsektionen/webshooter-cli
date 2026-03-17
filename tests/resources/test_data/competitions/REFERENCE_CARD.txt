@@ -1,0 +1,11 @@
+# Reference Card for E2E Tests
+# User approved: 53780 is the developer's personal card
+#
+# Real card: 53780
+# Synthetic card: 10000
+#
+# Use in E2E tests:
+#   webshooter --use-cache --cache-dir <path> bests 2024 --card 10000
+#
+# Security note: Only this ONE mapping is revealed.
+# Other synthetic cards cannot be reversed without secret salt.

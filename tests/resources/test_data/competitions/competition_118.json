@@ -1,0 +1,217 @@
+{
+  "competitions": {
+    "id": 118,
+    "championships_id": 0,
+    "is_public": 1,
+    "results_is_public": 1,
+    "patrols_is_public": 1,
+    "organizer_id": 98,
+    "organizer_type": "App\\Models\\Club",
+    "invoices_recipient_id": 11,
+    "invoices_recipient_type": "App\\Models\\District",
+    "name": "L-kretsen Mästerskap MilSnabb A och R",
+    "allow_teams": 1,
+    "teams_registration_fee": 0,
+    "website": "www.klippanspistolklubb.se",
+    "contact_name": "Competition Organizer",
+    "contact_venue": "Klippans Pk, Mammarp",
+    "contact_city": "Klippan",
+    "lat": 56.15,
+    "lng": 13.17,
+    "google_maps": null,
+    "description": "Kretsmästerskap i Militär Snabbmatch A och R",
+    "results_type": "military",
+    "results_prices": 1,
+    "results_comment": null,
+    "date": "2023-09-17",
+    "signups_opening_date": "2023-08-11",
+    "signups_closing_date": "2023-09-03",
+    "allow_signups_after_closing_date": 1,
+    "price_signups_after_closing_date": 20,
+    "approval_signups_after_closing_date": 1,
+    "final_time": "18:00:00",
+    "created_by": 152,
+    "pdf_logo": "webshooter",
+    "closed_at": null,
+    "weapongroups": {
+      "0": {
+        "id": 1,
+        "name": "A",
+        "displayname": "Vpg A"
+      },
+      "3": {
+        "id": 7,
+        "name": "R",
+        "displayname": "Vpg R"
+      }
+    },
+    "signups_count": 20,
+    "patrols_count": 2,
+    "teams_count": 4,
+    "results_count": 20,
+    "status": "completed",
+    "status_human": "Avslutad (genomförd)",
+    "start_time_human": "08:30",
+    "final_time_human": "18:00",
+    "allow_signups_after_closing_date_human": "Behöver godkännas. 20 kr avgift",
+    "translations": {
+      "patrols_name_singular": "skjutlag",
+      "patrols_name_plural": "skjutlag",
+      "patrols_list_singular": "skjutlagslista",
+      "patrols_list_plural": "skjutlagslistor",
+      "patrols_size": "antal skjutplatser",
+      "patrols_lane_singular": "skjutplats",
+      "patrols_lane_plural": "skjutplatser",
+      "stations_name_singular": "serie",
+      "stations_name_plural": "serier",
+      "results_list_singular": "resultatlista",
+      "results_list_plural": "resultatlistor",
+      "shootingcard": "skjutkort",
+      "shootingcards": "skjutkort",
+      "signups": "anmälningar"
+    },
+    "results_type_human": "Militär snabbmatch",
+    "available_logos": [
+      "webshooter",
+      "club"
+    ],
+    "pdf_logo_path": "/var/www/html/public/img/webshooter-new.jpg",
+    "pdf_logo_url": "/img/webshooter-new.jpg",
+    "user_roles": [],
+    "championship": null,
+    "club": {
+      "id": 98,
+      "districts_id": 11,
+      "clubs_nr": "157",
+      "name": "Club_020",
+      "user_has_role": null,
+      "address_incomplete": false,
+      "logo": null,
+      "logo_url": null,
+      "logo_path": null,
+      "district": {
+        "id": 11,
+        "districts_nr": "11",
+        "name": "Kristianstads Pistolskyttekrets",
+        "phone": null,
+        "email": null,
+        "address_street": null,
+        "address_street_2": null,
+        "address_zipcode": null,
+        "address_city": null,
+        "address_country": null,
+        "bankgiro": null,
+        "postgiro": null,
+        "swish": null,
+        "logo": null,
+        "clubs_count": 22,
+        "address_combined": null,
+        "logo_url": "",
+        "logo_path": ""
+      }
+    },
+    "competitiontype": {
+      "id": 8,
+      "name": "Militär snabbmatch",
+      "created_at": "2021-12-30T12:19:23.000000Z",
+      "updated_at": "2021-12-30T12:19:23.000000Z",
+      "deleted_at": null
+    },
+    "usersignups": [],
+    "weaponclasses": [
+      {
+        "id": 1,
+        "weapongroups_id": 1,
+        "classname": "A1",
+        "championship": 0,
+        "classname_general": "A",
+        "pivot": {
+          "competitions_id": 118,
+          "weaponclasses_id": 1,
+          "registration_fee": 100
+        },
+        "weapongroup": {
+          "id": 1,
+          "name": "A",
+          "displayname": "Vpg A"
+        }
+      },
+      {
+        "id": 2,
+        "weapongroups_id": 1,
+        "classname": "A2",
+        "championship": 0,
+        "classname_general": "A",
+        "pivot": {
+          "competitions_id": 118,
+          "weaponclasses_id": 2,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 3,
+        "weapongroups_id": 1,
+        "classname": "A3",
+        "championship": 1,
+        "classname_general": "A",
+        "pivot": {
+          "competitions_id": 118,
+          "weaponclasses_id": 3,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 31,
+        "weapongroups_id": 7,
+        "classname": "R1",
+        "championship": 0,
+        "classname_general": "R",
+        "pivot": {
+          "competitions_id": 118,
+          "weaponclasses_id": 31,
+          "registration_fee": 100
+        },
+        "weapongroup": {
+          "id": 7,
+          "name": "R",
+          "displayname": "Vpg R"
+        }
+      },
+      {
+        "id": 32,
+        "weapongroups_id": 7,
+        "classname": "R2",
+        "championship": 0,
+        "classname_general": "R",
+        "pivot": {
+          "competitions_id": 118,
+          "weaponclasses_id": 32,
+          "registration_fee": 100
+        }
+      },
+      {
+        "id": 33,
+        "weapongroups_id": 7,
+        "classname": "R3",
+        "championship": 1,
+        "classname_general": "R",
+        "pivot": {
+          "competitions_id": 118,
+          "weaponclasses_id": 33,
+          "registration_fee": 100
+        }
+      }
+    ],
+    "invoices_recipient": {
+      "id": 11,
+      "districts_id": null,
+      "clubs_nr": "000",
+      "name": "Club_024",
+      "user_has_role": null,
+      "address_incomplete": false,
+      "logo": null,
+      "logo_url": null,
+      "logo_path": null
+    }
+  }
+}
