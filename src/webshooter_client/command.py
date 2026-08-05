@@ -11,6 +11,7 @@ if __package__ is None or len(__package__) == 0:
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from webshooter_client.api import api_calls
+from webshooter_client.api.exceptions import WebShooterAPIError
 from webshooter_client.common.application_config import ApplicationConfig
 from webshooter_client.commands import (
     bests,
@@ -102,7 +103,16 @@ class Command:
                 "  club = 12-239\n"
                 "  unicode = true\n"
                 "  use_cache = true\n"
+                "  refresh_competitions = false\n"
                 "  cache_dir = /custom/cache/path\n\n"
+                "LOCAL STORE:\n\n"
+                "  --use-cache (alias --offline) answers only from locally downloaded data\n"
+                "  and never calls the API; a miss is an error telling you to sync.\n"
+                "  --refresh-competitions is the one exception: it re-fetches the competition\n"
+                "  list (not results), so you can see newly announced competitions offline.\n\n"
+                "  wscli sync    Download competitions missing from the local store\n"
+                "  wscli store   Show what the local store holds (no network)\n"
+                "  wscli mcp     Serve the local store to AI agents over MCP\n\n"
                 "USAGE EXAMPLES:\n\n"
                 "  # Find a competition\n"
                 "  command.py competitions --year 2024\n\n"
@@ -140,7 +150,13 @@ class Command:
         )
         self.__parser.add_argument(
             "--use-cache",
-            help="Use locally cached API responses (faster, no network required)",
+            help="Answer only from the local store, never the API (fill it with 'wscli sync')",
+            action="store_true",
+            default=False,
+        )
+        self.__parser.add_argument(
+            "--refresh-competitions",
+            help="With --use-cache: still re-fetch the competition list (not results) from the API",
             action="store_true",
             default=False,
         )
@@ -152,7 +168,7 @@ class Command:
         )
         self.__parser.add_argument(
             "--offline",
-            help="Never call the API; use only locally downloaded data (implies --use-cache)",
+            help="Alias for --use-cache",
             action="store_true",
             default=False,
         )
@@ -435,14 +451,19 @@ def main():
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING, format="%(levelname)s: %(message)s")
 
     # Initialize config (needed for cache_dir in --clear-cache)
+    # --use-cache means the local store is the whole world; --offline is its alias.
+    # Combining it with `sync` is a contradiction, and sync says so rather than
+    # quietly downloading anyway.
+    local_only = args.use_cache or args.offline
+
     ApplicationConfig(
         token=args.token,
         unicode=args.unicode,
         verbose=args.verbose,
-        # Offline is meaningless without reading the local store.
-        use_cache=args.use_cache or args.offline,
+        use_cache=local_only,
         cache_dir=args.cache_dir,
-        offline=args.offline,
+        offline=local_only,
+        refresh_competitions=args.refresh_competitions,
     )
 
     # Handle --clear-cache before normal command execution
@@ -459,8 +480,16 @@ def main():
 
     _normalize_card_club_args(args)
 
-    if not _execute_command(args.command, args):
-        command.print_help()
+    try:
+        if not _execute_command(args.command, args):
+            command.print_help()
+            sys.exit(1)
+    except WebShooterAPIError as e:
+        # These carry an actionable message (e.g. "run sync first"); a traceback
+        # only buries it. Use --verbose when you actually want the stack.
+        if args.verbose:
+            raise
+        print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
     sys.exit(0)

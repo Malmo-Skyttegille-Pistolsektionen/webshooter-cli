@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from webshooter_client.api.api_calls import fetch_data
+from webshooter_client.api.api_calls import fetch_data, get_competitions
 from webshooter_client.api.exceptions import OfflineCacheMissError
 from webshooter_client.common.application_config import ApplicationConfig
 
@@ -76,3 +76,76 @@ class TestFetchDataForceRefresh:
 
         assert result == {"old": True}
         mock_get.assert_not_called()
+
+    def test_force_refresh_overrides_offline(self, reset_config, tmp_path):
+        """Offline blocks the implicit fallback to the API, not an explicit refresh.
+
+        This is what lets --refresh-competitions update the competition list while
+        every other lookup stays local.
+        """
+        ApplicationConfig(offline=True, use_cache=True, cache_dir=str(tmp_path), token="test-token")
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = json.dumps({"fresh": True})
+
+        with patch("requests.get", return_value=mock_response) as mock_get:
+            result = fetch_data("https://example.com/api", cache_key="some_key", force_refresh=True)
+
+        assert result == {"fresh": True}
+        mock_get.assert_called_once()
+
+
+class TestRefreshCompetitionsSetting:
+    """The competition list is the one thing an offline run may re-fetch."""
+
+    @staticmethod
+    def _competitions_payload():
+        return {
+            "competitions": {
+                "data": [
+                    {
+                        "id": 1,
+                        "name": "Fresh Competition",
+                        "date": "2026-05-01",
+                        "results_type": "precision",
+                        "contact_city": "Malmö",
+                        "contact_venue": "Bödkaregården",
+                        "signups_closing_date": "2026-04-24",
+                    }
+                ]
+            }
+        }
+
+    def test_refresh_competitions_refetches_the_list_while_offline(self, reset_config, tmp_path):
+        ApplicationConfig(
+            offline=True,
+            use_cache=True,
+            refresh_competitions=True,
+            cache_dir=str(tmp_path),
+            token="test-token",
+        )
+        stale = tmp_path / "competitions.json"
+        stale.write_text(json.dumps({"competitions": {"data": []}}))
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = json.dumps(self._competitions_payload())
+
+        with patch("requests.get", return_value=mock_response) as mock_get:
+            competitions = get_competitions(year=None)
+
+        mock_get.assert_called_once()
+        assert list(competitions) == [1]
+        assert competitions[1].name == "Fresh Competition"
+
+    def test_without_the_setting_the_cached_list_is_used(self, reset_config, tmp_path):
+        ApplicationConfig(offline=True, use_cache=True, cache_dir=str(tmp_path), token="test-token")
+        cached = tmp_path / "competitions.json"
+        cached.write_text(json.dumps(self._competitions_payload()))
+
+        with patch("requests.get") as mock_get:
+            competitions = get_competitions(year=None)
+
+        mock_get.assert_not_called()
+        assert list(competitions) == [1]

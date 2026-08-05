@@ -109,7 +109,9 @@ def get_competitions(year: Optional[int], force_refresh: bool = False) -> dict[i
         year: Optional year to filter competitions (e.g., 2024)
         force_refresh: Re-fetch the competition list from the API even when a
             cached copy exists. Without this a cached list can never learn about
-            competitions published since it was written.
+            competitions published since it was written. Also enabled by the
+            `refresh_competitions` setting (`--refresh-competitions`), which is
+            the one exception an otherwise offline run can opt into.
 
     Returns:
         Dictionary mapping competition IDs to Competition objects
@@ -119,8 +121,10 @@ def get_competitions(year: Optional[int], force_refresh: bool = False) -> dict[i
     logging.info("Fetching competitions")
     url = BASE_URL_COMPETITIONS
 
+    refresh = force_refresh or ApplicationConfig().refresh_competitions
+
     # Cache key is year-agnostic since API returns all competitions
-    data = fetch_data(url=url, cache_key=get_cache_key_for_competitions(), force_refresh=force_refresh)
+    data = fetch_data(url=url, cache_key=get_cache_key_for_competitions(), force_refresh=refresh)
 
     for competition in data["competitions"]["data"]:
         if not year or competition["date"].startswith(str(year)):
@@ -260,8 +264,9 @@ def fetch_data(  # noqa: C901
         max_retries: Maximum number of retry attempts on HTTP 500 (default: 5)
         backoff_factor: Seconds to multiply by retry count for backoff (default: 10)
         force_refresh: Ignore any cached copy and re-fetch from the API. The fresh
-            response is still written to the cache. Used by `sync` to pick up newly
-            published competitions.
+            response is still written to the cache. This is a deliberate request for
+            the network, so it also overrides offline mode — offline blocks the
+            *implicit* fallback to the API, not an explicit refresh.
 
     Returns:
         Parsed JSON response as dictionary
@@ -280,8 +285,9 @@ def fetch_data(  # noqa: C901
         if cached_data is not None:
             return cached_data
 
-    # Offline mode never reaches the network: a miss is an error the caller must handle.
-    if ApplicationConfig().offline:
+    # Offline mode never falls back to the network: a miss is an error the caller
+    # must handle. An explicit force_refresh is the caller opting in, so it passes.
+    if ApplicationConfig().offline and not force_refresh:
         raise OfflineCacheMissError(
             f"Offline mode: no locally downloaded data for '{cache_key or url}'. Run 'wscli sync' first.",
             url=url,

@@ -204,7 +204,11 @@ def sync_competitions(
     """
     config = ApplicationConfig()
     if config.offline:
-        raise WebShooterAPIError("sync requires network access but offline mode is enabled")
+        raise WebShooterAPIError(
+            "sync downloads data, so it cannot run with --use-cache/--offline. "
+            "Drop the flag, or use 'sync --reindex' to rebuild the index from data "
+            "that is already downloaded."
+        )
 
     # Syncing is by definition a cache-populating operation. Reads that hit the
     # cache are exactly the incremental behaviour we want: already-downloaded

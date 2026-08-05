@@ -67,6 +67,12 @@ Webshooter Client is a Python CLI application for interacting with the webshoote
 - Config file: `~/.webshooter.rc` (optional)
 - Initializes `ApplicationConfig` singleton
 - Two entry points: `wscli` and `webshooter`
+- `--use-cache`/`--offline` (aliases for the same setting) and
+  `--refresh-competitions` are global flags parsed here, ahead of the
+  subcommand
+- `main()` catches `WebShooterAPIError` at the top level and prints
+  `Error: <message>` with exit code 1 instead of a traceback; `--verbose`
+  re-raises for the full stack
 
 **Configuration Priority:** CLI args > config file > defaults
 
@@ -190,8 +196,20 @@ APIError (base)
 ├── APIConnectionError    # Network issues
 ├── APITimeoutError       # Request timeout
 ├── APIHTTPError         # HTTP errors (4xx, 5xx)
-└── DataValidationError  # Invalid API response data
+├── DataValidationError  # Invalid API response data
+└── OfflineCacheMissError # --use-cache/--offline and the data isn't local
 ```
+
+**Offline guard (`fetch_data`):** when `ApplicationConfig().offline` is set,
+`fetch_data` never falls back to the network — a cache miss raises
+`OfflineCacheMissError` telling the caller to run `wscli sync`. The one way
+past that guard is `force_refresh=True`, which is a deliberate request for
+fresh data and so overrides the offline check (offline blocks the *implicit*
+fallback to the API on a miss, not an explicit refresh). `get_competitions()`
+passes `force_refresh=True` either when called with that argument directly
+(as `sync` does) or when `ApplicationConfig().refresh_competitions` is set
+(`--refresh-competitions`), so a `--use-cache` run can still opt into a fresh
+competition list without giving up local-only behavior for everything else.
 
 ### 5. Models Layer (`models/`)
 
@@ -296,6 +314,13 @@ with no network call — useful after switching cards or for a store populated
 before the index existed. `get_local_store_status()` answers "what does the
 store contain" (count, date range, last sync, card) without touching the
 network either.
+
+Because `sync_competitions()` downloads data by definition, it refuses to run
+when `ApplicationConfig().offline` is set: it raises a `WebShooterAPIError`
+telling the user to drop `--use-cache`/`--offline` or use `sync --reindex`
+instead. `reindex_local_store()` is exempt from that check — it only reads
+data already on disk — which is why `sync --reindex` is documented as working
+with `--use-cache`.
 
 **Why a separate layer from `api/cache.py`:** `api/cache.py` is a low-level
 key/value file cache (raw API responses, keyed by URL/id). `sync/` is the

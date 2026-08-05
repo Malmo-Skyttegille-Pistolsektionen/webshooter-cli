@@ -87,14 +87,24 @@ Flags: `--card`, `--since YYYY-MM-DD` (explicit start date instead of the
 watermark), `--full` (ignore the watermark, consider every past competition),
 `--dry-run`, `--limit N`, `--reindex`.
 
+Since `sync` downloads data, it refuses to run with `--use-cache`/`--offline`
+("sync downloads data, so it cannot run with --use-cache/--offline. Drop the
+flag, or use 'sync --reindex' ..."). `sync --reindex` is the exception: it only
+reads data already on disk, so it works fine with `--use-cache`.
+
 `wscli store` prints what the store holds (competition count, date range, last
 sync time, card, competitions with your results) without any network access.
 
 ### Offline mode
 
-`wscli --offline <command>` refuses to make any network call; a cache miss
-raises `OfflineCacheMissError` instead of falling back to the API. `--offline`
-implies `--use-cache`.
+`--use-cache` answers only from the local store and never calls the API; a
+miss raises `OfflineCacheMissError` telling you to run `wscli sync` first.
+`--offline` is just an alias for `--use-cache` — they set the same thing.
+
+`--refresh-competitions` is the one exception to local-only: it re-fetches the
+*competition list* (not results) from the API even while `--use-cache`/
+`--offline` is set, so an otherwise-local run can still see newly announced
+competitions. Config-file key: `refresh_competitions`.
 
 ## MCP Server
 
