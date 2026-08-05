@@ -5,10 +5,24 @@ from collections import defaultdict
 from typing import Callable, Dict, List, Optional, Set, Tuple, TypeVar
 
 from webshooter_client.api.api_calls import get_competitions, get_results
-from webshooter_client.models.competition import CompetitionType
+from webshooter_client.api.cache import is_cached
+from webshooter_client.common.application_config import ApplicationConfig
+from webshooter_client.models.competition import Competition, CompetitionType
 from webshooter_client.models.result import FieldResult, ResultBase
 
 T = TypeVar("T")
+
+
+def is_locally_available(competition: Competition) -> bool:
+    """Whether a competition can be read at all in the current mode.
+
+    Offline runs answer from the local store only, so competitions that have not
+    been downloaded are skipped rather than raising. Online runs consider
+    everything and fetch what is missing.
+    """
+    if not ApplicationConfig().offline:
+        return True
+    return is_cached(f"competition_{competition.id}_results")
 
 
 def fetch_results_for_card(
@@ -43,7 +57,7 @@ def fetch_results_for_card(
     all_competitions = []
     for year in years:
         comps_dict = get_competitions(year=year)
-        comps = [c for c in comps_dict.values() if c.type in competition_types]
+        comps = [c for c in comps_dict.values() if c.type in competition_types and is_locally_available(c)]
         for comp in comps:
             all_competitions.append((year, comp))
 
@@ -107,7 +121,11 @@ def fetch_field_competition_results(
     all_competitions = []
     for year in years:
         comps_dict = get_competitions(year=year)
-        comps = [c for c in comps_dict.values() if c.type in (CompetitionType.FIELD, CompetitionType.POINTFIELD)]
+        comps = [
+            c
+            for c in comps_dict.values()
+            if c.type in (CompetitionType.FIELD, CompetitionType.POINTFIELD) and is_locally_available(c)
+        ]
         for comp in comps:
             all_competitions.append((year, comp))
 

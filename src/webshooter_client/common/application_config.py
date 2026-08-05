@@ -25,8 +25,14 @@ class ApplicationConfig(metaclass=SingletonMeta):
         unicode: Enable Unicode symbols in output (default: True)
         verbose: Enable verbose logging (default: False)
         token: API authentication token from webshooter.se (default: None)
-        use_cache: Use local file cache instead of API calls (default: False)
+        use_cache: Answer from the local store instead of the API (default: False).
+            Implies offline: the store is the whole world, and a miss is an error
+            rather than a silent API call. Fill the store with `wscli sync`.
         cache_dir: Directory for cache files (default: ~/.webshooter/cache)
+        offline: Never perform network calls; a cache miss is an error (default: False)
+        refresh_competitions: The one exception to offline — re-fetch the competition
+            list (not results) from the API, so an offline run can still see which
+            competitions exist (default: False)
     """
 
     unicode: bool = field(default=True)
@@ -34,3 +40,5 @@ class ApplicationConfig(metaclass=SingletonMeta):
     token: Optional[str] = field(default=None)
     use_cache: bool = field(default=False)
     cache_dir: Optional[str] = field(default=None)
+    offline: bool = field(default=False)
+    refresh_competitions: bool = field(default=False)

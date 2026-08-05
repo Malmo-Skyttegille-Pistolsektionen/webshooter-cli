@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 from tabulate import tabulate
 
 from webshooter_client.api.api_calls import get_competitions, get_results
+from webshooter_client.common.fetch_utils import is_locally_available
 from webshooter_client.common.competition_filter import (
     is_valid_precision_result,
     get_result_points,
@@ -158,6 +159,7 @@ def _fetch_all_personal_bests(year: int, card: str) -> tuple[List[PersonalBest],
         for c in competitions
         if c.type
         in (CompetitionType.PRECISION, CompetitionType.MILITARY, CompetitionType.FIELD, CompetitionType.POINTFIELD)
+        and is_locally_available(c)
     ]
 
     personal_bests: List[PersonalBest] = []

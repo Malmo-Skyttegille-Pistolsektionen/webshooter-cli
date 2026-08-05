@@ -21,6 +21,7 @@ from webshooter_client.api.exceptions import (
     APIServerError,
     APIClientError,
     APIRetryExhaustedError,
+    OfflineCacheMissError,
 )
 from webshooter_client.api.cache import (
     load_from_cache,
@@ -96,7 +97,7 @@ def get_competition(competition_id: int) -> Competition:
     return competition_obj
 
 
-def get_competitions(year: Optional[int]) -> dict[int, Competition]:
+def get_competitions(year: Optional[int], force_refresh: bool = False) -> dict[int, Competition]:
     """
     Fetch all competitions, optionally filtered by year.
 
@@ -106,6 +107,11 @@ def get_competitions(year: Optional[int]) -> dict[int, Competition]:
 
     Args:
         year: Optional year to filter competitions (e.g., 2024)
+        force_refresh: Re-fetch the competition list from the API even when a
+            cached copy exists. Without this a cached list can never learn about
+            competitions published since it was written. Also enabled by the
+            `refresh_competitions` setting (`--refresh-competitions`), which is
+            the one exception an otherwise offline run can opt into.
 
     Returns:
         Dictionary mapping competition IDs to Competition objects
@@ -115,8 +121,10 @@ def get_competitions(year: Optional[int]) -> dict[int, Competition]:
     logging.info("Fetching competitions")
     url = BASE_URL_COMPETITIONS
 
+    refresh = force_refresh or ApplicationConfig().refresh_competitions
+
     # Cache key is year-agnostic since API returns all competitions
-    data = fetch_data(url=url, cache_key=get_cache_key_for_competitions())
+    data = fetch_data(url=url, cache_key=get_cache_key_for_competitions(), force_refresh=refresh)
 
     for competition in data["competitions"]["data"]:
         if not year or competition["date"].startswith(str(year)):
@@ -237,7 +245,11 @@ def get_signups(competition_id: int) -> List[Signup]:
 
 
 def fetch_data(  # noqa: C901
-    url: str, cache_key: Optional[str] = None, max_retries: int = 5, backoff_factor: int = 10
+    url: str,
+    cache_key: Optional[str] = None,
+    max_retries: int = 5,
+    backoff_factor: int = 10,
+    force_refresh: bool = False,
 ) -> Dict[str, Any]:
     """
     Fetch JSON data from the WebShooter API with retry logic and optional caching.
@@ -251,11 +263,16 @@ def fetch_data(  # noqa: C901
         cache_key: Optional cache identifier for saving/loading cached data
         max_retries: Maximum number of retry attempts on HTTP 500 (default: 5)
         backoff_factor: Seconds to multiply by retry count for backoff (default: 10)
+        force_refresh: Ignore any cached copy and re-fetch from the API. The fresh
+            response is still written to the cache. This is a deliberate request for
+            the network, so it also overrides offline mode — offline blocks the
+            *implicit* fallback to the API, not an explicit refresh.
 
     Returns:
         Parsed JSON response as dictionary
 
     Raises:
+        OfflineCacheMissError: In offline mode when the data is not cached
         APIConnectionError: On network connection errors
         APITimeoutError: On request timeout
         APIServerError: On HTTP 5xx errors after retries
@@ -263,10 +280,19 @@ def fetch_data(  # noqa: C901
         APIRetryExhaustedError: If max retries exceeded
     """
     # Try loading from cache first
-    if cache_key:
+    if cache_key and not force_refresh:
         cached_data = load_from_cache(cache_key)
         if cached_data is not None:
             return cached_data
+
+    # Offline mode never falls back to the network: a miss is an error the caller
+    # must handle. An explicit force_refresh is the caller opting in, so it passes.
+    if ApplicationConfig().offline and not force_refresh:
+        raise OfflineCacheMissError(
+            f"Offline mode: no locally downloaded data for '{cache_key or url}'. Run 'wscli sync' first.",
+            url=url,
+            cache_key=cache_key,
+        )
 
     headers = HEADERS.copy()
     headers["Authorization"] = f"Bearer {ApplicationConfig().token}"

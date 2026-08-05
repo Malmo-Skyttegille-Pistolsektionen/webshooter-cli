@@ -12,39 +12,48 @@ Webshooter Client is a Python CLI application for interacting with the webshoote
 ┌─────────────────────────────────────────────┐
 │           CLI Entry Point (command.py)       │
 │              configargparse                  │
-└────────────────┬─────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────────┐
-│        Commands Layer (commands/)            │
-│   BaseCommand + Subcommand Classes           │
-│   (competitions, results, signups, etc.)     │
-└────────────┬──────────────┬──────────────────┘
-             │              │
-             ▼              ▼
-    ┌────────────┐   ┌──────────────┐
-    │  Services  │   │  API Layer   │
-    │  Layer     │   │ (api_calls)  │
-    │ (parsers,  │   │              │
-    │ formatters)│   │   HTTP       │
-    └─────┬──────┘   └──────┬───────┘
-          │                 │
-          │                 ▼
-          │         ┌───────────────┐
-          │         │  webshooter   │
-          │         │  .se API      │
-          │         │  v4.1.9       │
-          │         └───────────────┘
-          │
-          ▼
-    ┌──────────────────┐
-    │  Models Layer    │
-    │  (dataclasses)   │
-    │  Competition     │
-    │  Result          │
-    │  Signup          │
-    │  Patrol          │
-    └──────────────────┘
+└────────────────┬──────────────┬──────────────┘
+                 │              │
+                 ▼              ▼
+┌─────────────────────────────┐  ┌──────────────────────────┐
+│  Commands Layer (commands/)  │  │  MCP Server (mcp/)       │
+│  BaseCommand + Subcommands   │  │  wscli mcp — exposes the │
+│  (competitions, results,     │  │  local store to AI agents│
+│   sync, store, etc.)         │  │  as MCP tools            │
+└──────┬──────────┬────────────┘  └────────────┬──────────────┘
+       │          │                            │
+       │          ▼                            ▼
+       │  ┌────────────────────────────────────────┐
+       │  │  Services Layer (services/)             │
+       │  │  Data-returning functions shared by     │
+       │  │  the CLI and the MCP server              │
+       │  │  (parsers, formatters, local_query)     │
+       │  └───────┬──────────────────────┬──────────┘
+       │          │                      │
+       ▼          ▼                      ▼
+┌────────────┐ ┌──────────────┐  ┌───────────────────┐
+│  Sync       │ │  API Layer   │  │  API Layer         │
+│  (sync/)    │ │ (api_calls)  │  │  local cache reads │
+│  incremental│ │              │  │  (api/cache.py)     │
+│  download + │ │   HTTP       │  │                     │
+│  index      │ └──────┬───────┘  └──────────┬──────────┘
+└─────┬───────┘        │                      │
+      │                ▼                      ▼
+      │        ┌───────────────┐     ┌──────────────────┐
+      │        │  webshooter   │     │  Local store      │
+      │        │  .se API      │     │  ~/.cache/        │
+      │        │  v4.1.9       │     │  webshooter        │
+      │        └───────────────┘     └──────────────────┘
+      │
+      ▼
+┌──────────────────┐
+│  Models Layer    │
+│  (dataclasses)   │
+│  Competition     │
+│  Result          │
+│  Signup          │
+│  Patrol          │
+└──────────────────┘
 ```
 
 ## Layer Responsibilities
@@ -58,6 +67,12 @@ Webshooter Client is a Python CLI application for interacting with the webshoote
 - Config file: `~/.webshooter.rc` (optional)
 - Initializes `ApplicationConfig` singleton
 - Two entry points: `wscli` and `webshooter`
+- `--use-cache`/`--offline` (aliases for the same setting) and
+  `--refresh-competitions` are global flags parsed here, ahead of the
+  subcommand
+- `main()` catches `WebShooterAPIError` at the top level and prints
+  `Error: <message>` with exit code 1 instead of a traceback; `--verbose`
+  re-raises for the full stack
 
 **Configuration Priority:** CLI args > config file > defaults
 
@@ -125,6 +140,24 @@ FieldResultParser()
 - Separates parsing from presentation
 - Reusable across commands
 
+#### Local Queries (`services/local_query.py`)
+
+**Responsibility:** Data-returning functions answered entirely from the local
+store, shared between the CLI (`commands/`) and the MCP server (`mcp/`).
+
+Every function here (`downloaded_competitions`, `my_results`, `personal_bests`,
+`competition_results`, `participation_summary`, …) reads only competitions
+already present on disk and never falls back to the network — each is safe to
+call with `ApplicationConfig(offline=True)`. Results are plain JSON-friendly
+dicts (`competition_to_dict`, `result_to_dict`) so the same code can back a
+printed table or an MCP tool response.
+
+**The rule that keeps this shared:** presentation (printing tables, formatting
+for a terminal) lives in `commands/`; anything that *returns data* belongs in
+`services/` so both the CLI and the MCP server can call it. `commands/sync.py`
+is the CLI's presentation layer over `sync/`, the same way `commands/*.py`
+generally sit over `services/`.
+
 ### 4. API Layer (`api/`)
 
 **Responsibility:** All HTTP communication with webshooter.se API.
@@ -163,8 +196,20 @@ APIError (base)
 ├── APIConnectionError    # Network issues
 ├── APITimeoutError       # Request timeout
 ├── APIHTTPError         # HTTP errors (4xx, 5xx)
-└── DataValidationError  # Invalid API response data
+├── DataValidationError  # Invalid API response data
+└── OfflineCacheMissError # --use-cache/--offline and the data isn't local
 ```
+
+**Offline guard (`fetch_data`):** when `ApplicationConfig().offline` is set,
+`fetch_data` never falls back to the network — a cache miss raises
+`OfflineCacheMissError` telling the caller to run `wscli sync`. The one way
+past that guard is `force_refresh=True`, which is a deliberate request for
+fresh data and so overrides the offline check (offline blocks the *implicit*
+fallback to the API on a miss, not an explicit refresh). `get_competitions()`
+passes `force_refresh=True` either when called with that argument directly
+(as `sync` does) or when `ApplicationConfig().refresh_competitions` is set
+(`--refresh-competitions`), so a `--use-cache` run can still opt into a fresh
+competition list without giving up local-only behavior for everything else.
 
 ### 5. Models Layer (`models/`)
 
@@ -240,6 +285,68 @@ class CompetitionType(DisplayEnum):
 - Swedish display names for output
 - English values for API
 - Clean access: `CompetitionType.MILITARY.display_name`
+
+### 7. Sync Layer (`sync/`)
+
+**Responsibility:** Incrementally download competitions into the local store
+and maintain the index used by offline queries.
+
+**Key module:** `sync/syncer.py`
+
+The webshooter API has no "changed since" endpoint, so `sync_competitions()`
+works from the competition calendar:
+
+1. Re-fetch the competition list (bypassing any cached copy — a stale list
+   can never contain competitions published after it was written).
+2. Find the most recent competition whose results are already downloaded —
+   the "watermark" (future-dated competitions are ignored so an empty results
+   file for something not yet shot can't push the watermark forward).
+3. Download every competition on or after the watermark that has already
+   taken place and is not downloaded yet (`--full` drops the watermark and
+   considers every past competition).
+4. Record, per competition, which weapon classes the given card competed in,
+   into `sync_index.json` (via `api/cache.py`'s `load_index`/`save_index`) —
+   that index is what makes later offline queries cheap, since they can open
+   only the files that can contain the shooter instead of scanning everything.
+
+`reindex_local_store()` rebuilds that index from competitions already on disk,
+with no network call — useful after switching cards or for a store populated
+before the index existed. `get_local_store_status()` answers "what does the
+store contain" (count, date range, last sync, card) without touching the
+network either.
+
+Because `sync_competitions()` downloads data by definition, it refuses to run
+when `ApplicationConfig().offline` is set: it raises a `WebShooterAPIError`
+telling the user to drop `--use-cache`/`--offline` or use `sync --reindex`
+instead. `reindex_local_store()` is exempt from that check — it only reads
+data already on disk — which is why `sync --reindex` is documented as working
+with `--use-cache`.
+
+**Why a separate layer from `api/cache.py`:** `api/cache.py` is a low-level
+key/value file cache (raw API responses, keyed by URL/id). `sync/` is the
+policy on top of it — deciding *what* to download and *when* a re-download is
+unnecessary, and maintaining the derived index. Keeping that policy out of
+`api/` keeps the cache module a dumb, reusable file store.
+
+### 8. MCP Layer (`mcp/`)
+
+**Responsibility:** Expose the local store to AI agents over the [Model
+Context Protocol](https://modelcontextprotocol.io), via `wscli mcp`.
+
+**Key module:** `mcp/server.py`
+
+`start_server()` is a thin adapter over `services/local_query.py` and
+`sync/` — it registers one MCP tool per local-query function
+(`local_store_status`, `list_competitions`, `get_competition_results`,
+`get_my_results`, `get_personal_bests`, `get_participation_summary`) plus,
+only when started with `--allow-sync`, `sync_local_store` and `reindex_store`.
+No statistics or filtering logic is reimplemented here — it all comes from
+`services/local_query.py` and `sync/`.
+
+The server puts `ApplicationConfig` into offline mode (`config.offline = True`)
+for the lifetime of the process, flipping it off only around the body of
+`sync_local_store`. This is what guarantees the read-only tools can never
+silently reach the network.
 
 ## Data Flow Examples
 
@@ -368,6 +475,32 @@ User: wscli results --competition 283
 - Easy to add retry logic for connection errors
 - Better debugging and logging
 
+### 6. Why an MCP Server Over the Local Store, Rather Than Letting the Agent Shell Out to the CLI?
+
+**Problem:** Agents already know how to shell out to CLIs, so an MCP server
+needs to earn its keep over just running `wscli stats` and parsing the output.
+
+**Alternatives Considered:**
+- ❌ Let the agent invoke `wscli` and parse table output: fragile (agents have
+  to re-parse `tabulate` output on every call), gives the agent the token and
+  full network access, and costs one round trip per question.
+- ✅ MCP server over `services/local_query.py`: structured JSON in, structured
+  JSON out.
+
+**Benefits:**
+- **Structured JSON instead of parsing tables** — tools return the same dicts
+  `local_query.py` builds for the CLI, so an agent gets typed fields
+  (`points`, `weapon_class`, `competition.id`, …) instead of scraping columns.
+- **Offline by default** — the server forces `ApplicationConfig(offline=True)`
+  for every tool except `sync_local_store`/`reindex_store` (and only with
+  `--allow-sync`), so an agent exploring results cannot accidentally hammer
+  the live API.
+- **No token handling by the agent** — the token lives in `~/.webshooter.rc`
+  or the server's environment; the agent never sees or passes it.
+- **One round trip instead of many** — `get_personal_bests` or
+  `get_participation_summary` do the aggregation server-side, instead of the
+  agent shelling out repeatedly and combining CLI output itself.
+
 ## Testing Strategy
 
 ### Unit Tests
@@ -470,8 +603,8 @@ If API version changes, update `BASE_URL_*` constants in `api/api_calls.py`. Con
 
 ## Performance Considerations
 
-- **Network-bound:** CLI waits for API responses
-- **No caching:** Fresh data on each request
+- **Network-bound:** live commands wait for API responses
+- **Local store:** `wscli sync` populates `~/.cache/webshooter`; once synced, `--offline` and the MCP server answer entirely from disk with no network round trip
 - **Optimization:** Focus on UX (clear output) over speed
 
 ## Security
@@ -507,11 +640,14 @@ for result in results:
 - `models.*` - Dataclasses (Competition, Result, Signup, Patrol)
 - `commands.result_formatters` - Strategy formatters for display
 - `api.exceptions` - Custom exception hierarchy
+- `services.local_query` - Offline-safe, JSON-friendly queries shared by the CLI and the MCP server
+- `sync.syncer` - Incremental download into the local store (`sync_competitions`, `reindex_local_store`, `get_local_store_status`)
+- `mcp.server` - MCP server (`start_server`) exposing `services.local_query` and `sync` as tools
 
 ## Future Improvements
 
 Potential enhancements (not planned):
-- Local caching for offline access
+- ~~Local caching for offline access~~ — done: see `sync/`, `--offline`, and the MCP server
 - Async API calls for multiple competitions
 - Export formats (CSV, Excel)
 - Interactive TUI mode

@@ -48,6 +48,113 @@ wscli signups --competition 283 --club 12-239
 wscli --help
 ```
 
+## Local Store & Sync
+
+Webshooter has no "changed since" endpoint, so the CLI keeps its own incremental
+local store instead of re-fetching everything on every run. Data lives in
+`~/.cache/webshooter` (XDG `$XDG_CACHE_HOME/webshooter` if set, override with
+`--cache-dir`).
+
+```bash
+# Download everything new since the last sync
+wscli sync --card 12345
+
+# See what would be downloaded, without fetching anything
+wscli sync --card 12345 --dry-run
+
+# First run: populate the store from scratch
+wscli sync --card 12345 --full
+
+# Cap a long first run
+wscli sync --card 12345 --full --limit 50
+
+# Rebuild the index from what's already on disk (no network access)
+wscli sync --reindex
+
+# Inspect the store without touching the network
+wscli store
+```
+
+`wscli sync` re-fetches the competition calendar, finds the most recent
+competition whose results are already downloaded (the "watermark" — future-dated
+entries are ignored so an empty results file for an upcoming competition can't
+push it forward), and downloads every competition held on or after that date
+that isn't downloaded yet. For each one it records which weapon classes the
+given `--card` competed in, in `sync_index.json`, so later offline queries know
+which files to open without scanning everything.
+
+Flags: `--card`, `--since YYYY-MM-DD` (explicit start date instead of the
+watermark), `--full` (ignore the watermark, consider every past competition),
+`--dry-run`, `--limit N`, `--reindex`.
+
+Since `sync` downloads data, it refuses to run with `--use-cache`/`--offline`
+("sync downloads data, so it cannot run with --use-cache/--offline. Drop the
+flag, or use 'sync --reindex' ..."). `sync --reindex` is the exception: it only
+reads data already on disk, so it works fine with `--use-cache`.
+
+`wscli store` prints what the store holds (competition count, date range, last
+sync time, card, competitions with your results) without any network access.
+
+### Offline mode
+
+`--use-cache` answers only from the local store and never calls the API; a
+miss raises `OfflineCacheMissError` telling you to run `wscli sync` first.
+`--offline` is just an alias for `--use-cache` — they set the same thing.
+
+`--refresh-competitions` is the one exception to local-only: it re-fetches the
+*competition list* (not results) from the API even while `--use-cache`/
+`--offline` is set, so an otherwise-local run can still see newly announced
+competitions. Config-file key: `refresh_competitions`.
+
+## MCP Server
+
+`wscli mcp` runs an [MCP](https://modelcontextprotocol.io) server over the local
+store, so an AI agent can query your competition history directly instead of
+scraping CLI table output. It requires the optional `mcp` extra:
+
+```bash
+pip install 'webshooter-client[mcp]'
+```
+
+```bash
+wscli mcp [--card 12345] [--transport stdio|sse|streamable-http] [--host HOST] [--port PORT] [--allow-sync]
+```
+
+The server runs **offline by default** — no tool can silently hit the API. Only
+`sync_local_store` and `reindex_store` touch the network, and only when the
+server is started with `--allow-sync`.
+
+**Tools:**
+- `local_store_status` - competition count, date range, last sync time, card
+- `list_competitions` - downloaded competitions, optionally filtered by year/type/only_mine
+- `get_competition_results` - full result table for one downloaded competition
+- `get_my_results` - every downloaded result for one shooter, with series/station detail
+- `get_personal_bests` - best results per competition type and weapon class
+- `get_participation_summary` - competition counts by year and type
+- `sync_local_store` (requires `--allow-sync`) - download missing competitions
+- `reindex_store` (requires `--allow-sync`) - rebuild the index from disk, no network
+
+**Register with Claude Code:**
+
+```bash
+claude mcp add webshooter -- wscli mcp --card 12345 --allow-sync
+```
+
+or as raw JSON:
+
+```json
+{
+  "command": "wscli",
+  "args": ["mcp", "--card", "12345", "--allow-sync"]
+}
+```
+
+**Why it's worth it:** once ~280 competitions are downloaded, computing
+all-time personal bests offline takes well under a second, versus minutes of
+rate-limited API calls (the webshooter API frequently returns transient HTTP
+500s that have to be retried) if the agent queried the live API for the same
+answer.
+
 ## Documentation
 
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development setup, testing, and contribution guidelines
@@ -111,6 +218,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 - ✅ Support for all competition types (Military, Precision, Field, PointField)
 - ✅ Configurable via CLI args or config file
 - ✅ Type-safe with dataclasses and type hints
+- ✅ Incremental local store with offline mode (`wscli sync`, `wscli store`, `--offline`)
+- ✅ MCP server for AI agents to query the local store (`wscli mcp`)
 
 ## Architecture Highlights
 
@@ -129,7 +238,9 @@ src/webshooter_client/
 ├── command.py           # CLI entry point
 ├── api/                 # API client layer
 ├── commands/            # Subcommand implementations
-├── services/            # Business logic (formatters, parsers)
+├── services/            # Data-returning functions shared by CLI and MCP
+├── sync/                # Incremental download into the local store + index
+├── mcp/                 # MCP server exposing the local store to AI agents
 ├── models/              # Domain models (dataclasses)
 └── common/              # Shared utilities
 ```

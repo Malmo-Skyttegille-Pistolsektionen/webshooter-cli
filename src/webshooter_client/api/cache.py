@@ -143,6 +143,78 @@ def get_cache_key_for_page(competition_id: int, page: str) -> str:
     return f"competition_{competition_id}_{page_name}"
 
 
+def is_cached(cache_key: str) -> bool:
+    """Check whether data for a cache key has been downloaded.
+
+    Unlike :func:`load_from_cache` this ignores ``use_cache`` — it answers
+    "is this on disk?", not "should we read it?".
+    """
+    return _get_cache_path(cache_key).exists()
+
+
+def get_cache_dir() -> Path:
+    """Public accessor for the active cache directory."""
+    return _get_cache_dir()
+
+
+def list_cached_competition_ids() -> set[int]:
+    """Return the IDs of all competitions whose results have been downloaded.
+
+    A competition counts as downloaded only when its *results* are present;
+    metadata alone is not enough to compute statistics from.
+    """
+    cache_dir = _get_cache_dir()
+    if not cache_dir.exists():
+        return set()
+
+    ids: set[int] = set()
+    for path in cache_dir.glob("competition_*_results.json"):
+        stem = path.stem  # competition_<id>_results
+        parts = stem.split("_")
+        if len(parts) == 3 and parts[1].isdigit():
+            ids.add(int(parts[1]))
+    return ids
+
+
+# --- Sync index -------------------------------------------------------------
+#
+# The index records what a sync run has established about the local store, so
+# that later runs (and offline consumers such as the MCP server) do not have to
+# re-derive it by reading every cached results file.
+
+INDEX_FILENAME = "sync_index"
+
+
+def get_index_path() -> Path:
+    """Path of the sync index file."""
+    return _get_cache_path(INDEX_FILENAME)
+
+
+def load_index() -> Dict[str, Any]:
+    """Load the sync index, returning an empty index if none exists yet."""
+    path = get_index_path()
+    if not path.exists():
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        logger.warning(f"Unreadable sync index {path}: {e}")
+        return {}
+
+
+def save_index(index: Dict[str, Any]) -> None:
+    """Write the sync index, creating the cache directory if needed."""
+    cache_dir = _get_cache_dir()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    path = get_index_path()
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(index, f, indent=2, ensure_ascii=False, sort_keys=True)
+    except (IOError, TypeError) as e:
+        logger.warning(f"Error saving sync index: {e}")
+
+
 def clear_cache() -> int:
     """
     Clear all cached files by deleting the cache directory.

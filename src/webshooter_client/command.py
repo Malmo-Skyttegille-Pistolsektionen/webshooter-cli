@@ -11,6 +11,7 @@ if __package__ is None or len(__package__) == 0:
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from webshooter_client.api import api_calls
+from webshooter_client.api.exceptions import WebShooterAPIError
 from webshooter_client.common.application_config import ApplicationConfig
 from webshooter_client.commands import (
     bests,
@@ -22,6 +23,7 @@ from webshooter_client.commands import (
     ical_export,
     starts,
     stats,
+    sync,
 )
 
 
@@ -101,7 +103,16 @@ class Command:
                 "  club = 12-239\n"
                 "  unicode = true\n"
                 "  use_cache = true\n"
+                "  refresh_competitions = false\n"
                 "  cache_dir = /custom/cache/path\n\n"
+                "LOCAL STORE:\n\n"
+                "  --use-cache (alias --offline) answers only from locally downloaded data\n"
+                "  and never calls the API; a miss is an error telling you to sync.\n"
+                "  --refresh-competitions is the one exception: it re-fetches the competition\n"
+                "  list (not results), so you can see newly announced competitions offline.\n\n"
+                "  wscli sync    Download competitions missing from the local store\n"
+                "  wscli store   Show what the local store holds (no network)\n"
+                "  wscli mcp     Serve the local store to AI agents over MCP\n\n"
                 "USAGE EXAMPLES:\n\n"
                 "  # Find a competition\n"
                 "  command.py competitions --year 2024\n\n"
@@ -139,7 +150,13 @@ class Command:
         )
         self.__parser.add_argument(
             "--use-cache",
-            help="Use locally cached API responses (faster, no network required)",
+            help="Answer only from the local store, never the API (fill it with 'wscli sync')",
+            action="store_true",
+            default=False,
+        )
+        self.__parser.add_argument(
+            "--refresh-competitions",
+            help="With --use-cache: still re-fetch the competition list (not results) from the API",
             action="store_true",
             default=False,
         )
@@ -148,6 +165,12 @@ class Command:
             help="Custom cache directory (default: ~/.cache/webshooter)",
             type=str,
             default=None,
+        )
+        self.__parser.add_argument(
+            "--offline",
+            help="Alias for --use-cache",
+            action="store_true",
+            default=False,
         )
         self.__parser.add_argument(
             "--clear-cache",
@@ -257,6 +280,68 @@ class Command:
             dest="to_year",
         )
 
+        parser_sync = subparsers.add_parser(
+            "sync",
+            help="Download new competition data into the local store",
+        )
+        parser_sync.add_argument("--card", help="Pistolskyttekort number, e.g. 12345")
+        parser_sync.add_argument(
+            "--since",
+            help="Start date (YYYY-MM-DD) instead of the automatic watermark",
+            type=str,
+            default=None,
+        )
+        parser_sync.add_argument(
+            "--full",
+            help="Consider every past competition, not just those after the last download",
+            action="store_true",
+            default=False,
+        )
+        parser_sync.add_argument(
+            "--dry-run",
+            help="Show what would be downloaded without downloading anything",
+            action="store_true",
+            default=False,
+        )
+        parser_sync.add_argument(
+            "--reindex",
+            help="Rebuild the index from data already downloaded (no network access)",
+            action="store_true",
+            default=False,
+        )
+        parser_sync.add_argument(
+            "--limit",
+            help="Download at most this many competitions",
+            type=int,
+            default=None,
+        )
+
+        parser_store = subparsers.add_parser(
+            "store",
+            help="Show what the local store contains (no network access)",
+        )
+        parser_store.add_argument("--card", help="Pistolskyttekort number, e.g. 12345")
+
+        parser_mcp = subparsers.add_parser(
+            "mcp",
+            help="Run the MCP server exposing locally downloaded data to AI agents",
+        )
+        parser_mcp.add_argument("--card", help="Default pistolskyttekort number for MCP tools")
+        parser_mcp.add_argument(
+            "--transport",
+            help="MCP transport (default: stdio)",
+            choices=["stdio", "sse", "streamable-http"],
+            default="stdio",
+        )
+        parser_mcp.add_argument("--host", help="Bind host for HTTP transports", default="127.0.0.1")
+        parser_mcp.add_argument("--port", help="Bind port for HTTP transports", type=int, default=8000)
+        parser_mcp.add_argument(
+            "--allow-sync",
+            help="Allow the MCP server to download new data (otherwise it is read-only)",
+            action="store_true",
+            default=False,
+        )
+
         args = self.__parser.parse_args()
 
         return args
@@ -271,8 +356,17 @@ class Command:
         self.__parser.print_help(sys.stderr)
 
 
+#: Commands that must never trigger a network lookup just to resolve the card.
+_NO_CARD_LOOKUP_COMMANDS = {"store", "mcp"}
+
+
 def _normalize_card_club_args(args):
     """Normalize card and club arguments, handling None values and defaults."""
+    if getattr(args, "command", None) in _NO_CARD_LOOKUP_COMMANDS or ApplicationConfig().offline:
+        # Looking up the authenticated card requires the API; these paths are
+        # expected to work with no network at all.
+        return
+
     # Unset club if user passed --club=None or --club ""
     val = getattr(args, "club", None)
     if isinstance(val, str) and (val.strip().lower() == "none" or val.strip() == ""):
@@ -319,6 +413,29 @@ def _execute_command(command, args):
                 to_year=getattr(args, "to_year", None),
                 all_years=args.all_years,
             )
+    elif command == "sync":
+        if args.reindex:
+            sync.reindex(card=args.card)
+        else:
+            sync.sync(
+                card=args.card,
+                since=args.since,
+                full=args.full,
+                dry_run=args.dry_run,
+                limit=args.limit,
+            )
+    elif command == "store":
+        sync.status(card=args.card)
+    elif command == "mcp":
+        from webshooter_client.mcp.server import start_server
+
+        start_server(
+            card=args.card,
+            transport=args.transport,
+            host=args.host,
+            port=args.port,
+            allow_sync=args.allow_sync,
+        )
     elif command == "exit":
         sys.exit(1)
     else:
@@ -334,12 +451,19 @@ def main():
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING, format="%(levelname)s: %(message)s")
 
     # Initialize config (needed for cache_dir in --clear-cache)
+    # --use-cache means the local store is the whole world; --offline is its alias.
+    # Combining it with `sync` is a contradiction, and sync says so rather than
+    # quietly downloading anyway.
+    local_only = args.use_cache or args.offline
+
     ApplicationConfig(
         token=args.token,
         unicode=args.unicode,
         verbose=args.verbose,
-        use_cache=args.use_cache,
+        use_cache=local_only,
         cache_dir=args.cache_dir,
+        offline=local_only,
+        refresh_competitions=args.refresh_competitions,
     )
 
     # Handle --clear-cache before normal command execution
@@ -356,8 +480,16 @@ def main():
 
     _normalize_card_club_args(args)
 
-    if not _execute_command(args.command, args):
-        command.print_help()
+    try:
+        if not _execute_command(args.command, args):
+            command.print_help()
+            sys.exit(1)
+    except WebShooterAPIError as e:
+        # These carry an actionable message (e.g. "run sync first"); a traceback
+        # only buries it. Use --verbose when you actually want the stack.
+        if args.verbose:
+            raise
+        print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
     sys.exit(0)

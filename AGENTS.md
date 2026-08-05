@@ -226,9 +226,49 @@ def get_result_points(result: ResultBase) -> int:
 
 #### Cache System
 - Automatic caching to `~/.cache/webshooter` (XDG compliant)
-- `--use-cache` flag to use cached data
+- `--use-cache` answers only from the local store and never calls the API — a
+  miss raises `OfflineCacheMissError` telling the user to run `wscli sync`
+  first. Filling the store is `wscli sync`'s job alone; `--use-cache` no
+  longer falls back to the network on a miss.
+- `--offline` is just an alias for `--use-cache` (same flag, same behavior)
+- `--refresh-competitions` is the one exception to local-only: it re-fetches
+  the competition list (not results) from the API even under `--use-cache`/
+  `--offline`, so an offline run can still see newly announced competitions.
+  Config-file key: `refresh_competitions`.
 - `--cache-dir` to override cache location
 - `--clear-cache` to delete cache
+
+#### Local Store, Sync & MCP (`sync/`, `services/local_query.py`, `mcp/`)
+
+The local store is the same on-disk cache above, plus `sync_index.json`
+(read/written via `api/cache.py`'s `load_index`/`save_index`), which records
+per competition which weapon classes a given card competed in. `wscli sync`
+(`sync/syncer.py`) is the only thing that fills the store: it re-fetches the
+competition calendar, finds the watermark (most recent competition already
+downloaded, future-dated entries ignored), and downloads everything on or
+after it that's missing. `wscli store` and the `--use-cache`/`--offline`
+flags only ever read what's already there.
+
+Because `sync` downloads data, it refuses to run under `--use-cache`/
+`--offline` (`syncer.py` raises a `WebShooterAPIError` telling the user to
+drop the flag or use `sync --reindex`). `sync --reindex` is the exception —
+it only reads competitions already on disk, so it's allowed to run with
+`--use-cache`.
+
+**The rule to follow when touching this area:** presentation code (printing
+tables, formatting for a terminal) lives in `commands/`; anything that
+*returns data* — as a plain dict/list, JSON-friendly — belongs in `services/`
+(see `services/local_query.py`) so both the CLI (`commands/`) and the MCP
+server (`mcp/server.py`) can call the same function. Don't add a new
+statistic or filter directly inside `mcp/server.py` or a `commands/*.py`
+file if it isn't purely presentational — put the logic in `services/` (or
+`sync/` for anything that downloads or indexes) and have both callers use it.
+
+`mcp/server.py` registers one MCP tool per `services/local_query.py`
+function, plus `sync_local_store`/`reindex_store` from `sync/syncer.py` when
+started with `--allow-sync`. It forces `ApplicationConfig(offline=True)` for
+the whole process except briefly around `sync_local_store`, so a new tool
+added here must not assume network access is available.
 
 ---
 
@@ -319,6 +359,10 @@ python -m webshooter_client.command \
 - Log to stderr (not stdout)
 - Progress messages to stderr
 - Output data to stdout only
+- `WebShooterAPIError` (and subclasses, e.g. `OfflineCacheMissError`) raised
+  out of a command are caught in `command.py`'s `main()` and printed as a
+  clean `Error: <message>` on stderr with exit code 1 — no traceback. Pass
+  `--verbose` to re-raise and get the full stack instead.
 
 ---
 

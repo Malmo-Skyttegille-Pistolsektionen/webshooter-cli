@@ -5,7 +5,7 @@ from webshooter_client.commands import competitions
 def test_competition_list(mocker, testdata_resources_rootdir_w_path, capsys):
     mocker.patch(
         "webshooter_client.api.api_calls.fetch_data",
-        side_effect=lambda url, cache_key=None: fetch_data_side_effect(
+        side_effect=lambda url, cache_key=None, **kwargs: fetch_data_side_effect(
             testdata_resources_rootdir_w_path, competition=None, page=None
         ),
     )
@@ -23,7 +23,7 @@ def test_competition_list(mocker, testdata_resources_rootdir_w_path, capsys):
 def test_competitions(mocker, testdata_resources_rootdir_w_path):
     mocker.patch(
         "webshooter_client.api.api_calls.fetch_data",
-        side_effect=lambda url, cache_key=None: fetch_data_side_effect(
+        side_effect=lambda url, cache_key=None, **kwargs: fetch_data_side_effect(
             testdata_resources_rootdir_w_path, competition=None, page=None
         ),
     )
