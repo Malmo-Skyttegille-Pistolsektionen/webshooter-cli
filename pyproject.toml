@@ -50,6 +50,11 @@ dependencies = [
     "icalendar>=7.2.2,<7.3.0",
 ]
 
+[project.optional-dependencies]
+mcp = [
+    "mcp>=1.0",
+]
+
 [project.scripts]
 wscli = "webshooter_client.command:main"
 webshooter = "webshooter_client.command:main"

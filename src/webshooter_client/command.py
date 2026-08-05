@@ -22,6 +22,7 @@ from webshooter_client.commands import (
     ical_export,
     starts,
     stats,
+    sync,
 )
 
 
@@ -150,6 +151,12 @@ class Command:
             default=None,
         )
         self.__parser.add_argument(
+            "--offline",
+            help="Never call the API; use only locally downloaded data (implies --use-cache)",
+            action="store_true",
+            default=False,
+        )
+        self.__parser.add_argument(
             "--clear-cache",
             help="Clear all cached data and exit",
             action="store_true",
@@ -257,6 +264,68 @@ class Command:
             dest="to_year",
         )
 
+        parser_sync = subparsers.add_parser(
+            "sync",
+            help="Download new competition data into the local store",
+        )
+        parser_sync.add_argument("--card", help="Pistolskyttekort number, e.g. 12345")
+        parser_sync.add_argument(
+            "--since",
+            help="Start date (YYYY-MM-DD) instead of the automatic watermark",
+            type=str,
+            default=None,
+        )
+        parser_sync.add_argument(
+            "--full",
+            help="Consider every past competition, not just those after the last download",
+            action="store_true",
+            default=False,
+        )
+        parser_sync.add_argument(
+            "--dry-run",
+            help="Show what would be downloaded without downloading anything",
+            action="store_true",
+            default=False,
+        )
+        parser_sync.add_argument(
+            "--reindex",
+            help="Rebuild the index from data already downloaded (no network access)",
+            action="store_true",
+            default=False,
+        )
+        parser_sync.add_argument(
+            "--limit",
+            help="Download at most this many competitions",
+            type=int,
+            default=None,
+        )
+
+        parser_store = subparsers.add_parser(
+            "store",
+            help="Show what the local store contains (no network access)",
+        )
+        parser_store.add_argument("--card", help="Pistolskyttekort number, e.g. 12345")
+
+        parser_mcp = subparsers.add_parser(
+            "mcp",
+            help="Run the MCP server exposing locally downloaded data to AI agents",
+        )
+        parser_mcp.add_argument("--card", help="Default pistolskyttekort number for MCP tools")
+        parser_mcp.add_argument(
+            "--transport",
+            help="MCP transport (default: stdio)",
+            choices=["stdio", "sse", "streamable-http"],
+            default="stdio",
+        )
+        parser_mcp.add_argument("--host", help="Bind host for HTTP transports", default="127.0.0.1")
+        parser_mcp.add_argument("--port", help="Bind port for HTTP transports", type=int, default=8000)
+        parser_mcp.add_argument(
+            "--allow-sync",
+            help="Allow the MCP server to download new data (otherwise it is read-only)",
+            action="store_true",
+            default=False,
+        )
+
         args = self.__parser.parse_args()
 
         return args
@@ -271,8 +340,17 @@ class Command:
         self.__parser.print_help(sys.stderr)
 
 
+#: Commands that must never trigger a network lookup just to resolve the card.
+_NO_CARD_LOOKUP_COMMANDS = {"store", "mcp"}
+
+
 def _normalize_card_club_args(args):
     """Normalize card and club arguments, handling None values and defaults."""
+    if getattr(args, "command", None) in _NO_CARD_LOOKUP_COMMANDS or ApplicationConfig().offline:
+        # Looking up the authenticated card requires the API; these paths are
+        # expected to work with no network at all.
+        return
+
     # Unset club if user passed --club=None or --club ""
     val = getattr(args, "club", None)
     if isinstance(val, str) and (val.strip().lower() == "none" or val.strip() == ""):
@@ -319,6 +397,29 @@ def _execute_command(command, args):
                 to_year=getattr(args, "to_year", None),
                 all_years=args.all_years,
             )
+    elif command == "sync":
+        if args.reindex:
+            sync.reindex(card=args.card)
+        else:
+            sync.sync(
+                card=args.card,
+                since=args.since,
+                full=args.full,
+                dry_run=args.dry_run,
+                limit=args.limit,
+            )
+    elif command == "store":
+        sync.status(card=args.card)
+    elif command == "mcp":
+        from webshooter_client.mcp.server import start_server
+
+        start_server(
+            card=args.card,
+            transport=args.transport,
+            host=args.host,
+            port=args.port,
+            allow_sync=args.allow_sync,
+        )
     elif command == "exit":
         sys.exit(1)
     else:
@@ -338,8 +439,10 @@ def main():
         token=args.token,
         unicode=args.unicode,
         verbose=args.verbose,
-        use_cache=args.use_cache,
+        # Offline is meaningless without reading the local store.
+        use_cache=args.use_cache or args.offline,
         cache_dir=args.cache_dir,
+        offline=args.offline,
     )
 
     # Handle --clear-cache before normal command execution

@@ -27,6 +27,7 @@ class ApplicationConfig(metaclass=SingletonMeta):
         token: API authentication token from webshooter.se (default: None)
         use_cache: Use local file cache instead of API calls (default: False)
         cache_dir: Directory for cache files (default: ~/.webshooter/cache)
+        offline: Never perform network calls; a cache miss is an error (default: False)
     """
 
     unicode: bool = field(default=True)
@@ -34,3 +35,4 @@ class ApplicationConfig(metaclass=SingletonMeta):
     token: Optional[str] = field(default=None)
     use_cache: bool = field(default=False)
     cache_dir: Optional[str] = field(default=None)
+    offline: bool = field(default=False)

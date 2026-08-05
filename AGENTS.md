@@ -229,6 +229,34 @@ def get_result_points(result: ResultBase) -> int:
 - `--use-cache` flag to use cached data
 - `--cache-dir` to override cache location
 - `--clear-cache` to delete cache
+- `--offline` refuses any network call (raises `OfflineCacheMissError` on a
+  cache miss) and implies `--use-cache`
+
+#### Local Store, Sync & MCP (`sync/`, `services/local_query.py`, `mcp/`)
+
+The local store is the same on-disk cache above, plus `sync_index.json`
+(read/written via `api/cache.py`'s `load_index`/`save_index`), which records
+per competition which weapon classes a given card competed in. `wscli sync`
+(`sync/syncer.py`) is the only thing that fills the store: it re-fetches the
+competition calendar, finds the watermark (most recent competition already
+downloaded, future-dated entries ignored), and downloads everything on or
+after it that's missing. `wscli store` and the `--offline` flag only ever
+read what's already there.
+
+**The rule to follow when touching this area:** presentation code (printing
+tables, formatting for a terminal) lives in `commands/`; anything that
+*returns data* — as a plain dict/list, JSON-friendly — belongs in `services/`
+(see `services/local_query.py`) so both the CLI (`commands/`) and the MCP
+server (`mcp/server.py`) can call the same function. Don't add a new
+statistic or filter directly inside `mcp/server.py` or a `commands/*.py`
+file if it isn't purely presentational — put the logic in `services/` (or
+`sync/` for anything that downloads or indexes) and have both callers use it.
+
+`mcp/server.py` registers one MCP tool per `services/local_query.py`
+function, plus `sync_local_store`/`reindex_store` from `sync/syncer.py` when
+started with `--allow-sync`. It forces `ApplicationConfig(offline=True)` for
+the whole process except briefly around `sync_local_store`, so a new tool
+added here must not assume network access is available.
 
 ---
 
