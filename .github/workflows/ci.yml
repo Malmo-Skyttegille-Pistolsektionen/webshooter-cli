@@ -33,7 +33,12 @@ jobs:
       run: hatch run dev:flake8
 
   test:
-    name: Test on Python ${{ matrix.python-version }}
+    # Deliberately version-free. This is a required status check, and a check
+    # is matched on its context string: interpolating the matrix value here
+    # means bumping Python renames the context, after which the required check
+    # never reports and every pull request is blocked with nothing to explain
+    # it. The version still shows on the job's matrix leg in the UI.
+    name: Test suite
     needs: lint
     runs-on: ubuntu-latest
     strategy:
