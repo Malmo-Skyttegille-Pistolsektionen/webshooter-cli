@@ -33,12 +33,7 @@ jobs:
       run: hatch run dev:flake8
 
   test:
-    # Deliberately version-free. This is a required status check, and a check
-    # is matched on its context string: interpolating the matrix value here
-    # means bumping Python renames the context, after which the required check
-    # never reports and every pull request is blocked with nothing to explain
-    # it. The version still shows on the job's matrix leg in the UI.
-    name: Test suite
+    name: Test on Python ${{ matrix.python-version }}
     needs: lint
     runs-on: ubuntu-latest
     strategy:
@@ -67,6 +62,30 @@ jobs:
       uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
       continue-on-error: true
   
+  # The context the ruleset requires, instead of the matrix job itself.
+  #
+  # A matrix job's context always carries its matrix values -- GitHub appends
+  # them even for a single entry, so `test` reports as "Test on Python 3.13"
+  # whatever the job is called. Requiring that string means a Python bump
+  # renames the context, after which the required check never reports and every
+  # pull request is blocked with nothing to explain it. This job's name has
+  # nothing in it to move.
+  #
+  # `if: always()` is load-bearing: without it a failed or skipped `test` skips
+  # this job too, and a required check that never reports blocks the branch just
+  # as badly as a failing one -- only more confusingly.
+  tests:
+    name: Tests
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Fail unless every test leg succeeded
+      if: needs.test.result != 'success'
+      run: |
+        echo "test job result: ${{ needs.test.result }}"
+        exit 1
+
   build:
     name: Build package
     needs: test
