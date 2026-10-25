@@ -20,7 +20,7 @@ jobs:
         fetch-depth: 0
     
     - name: Set up Python
-      uses: actions/setup-python@v7.0.0
+      uses: actions/setup-python@v7.1.0
       with:
         python-version: "3.15.1"
     
@@ -43,7 +43,7 @@ jobs:
         fetch-depth: 0
     
     - name: Set up Python
-      uses: actions/setup-python@v7.0.0
+      uses: actions/setup-python@v7.1.0
       with:
         python-version: "3.15.1"
     
@@ -64,7 +64,7 @@ jobs:
         fetch-depth: 0  # Full history for hatch-vcs to determine version
     
     - name: Set up Python
-      uses: actions/setup-python@v7.0.0
+      uses: actions/setup-python@v7.1.0
       with:
         python-version: "3.15.1"
     
