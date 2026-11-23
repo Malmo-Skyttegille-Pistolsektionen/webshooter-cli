@@ -47,7 +47,7 @@ dependencies = [
     "requests==2.34.2",
     "configargparse==1.10.2",
     "tabulate==0.10.0",
-    "icalendar==7.3.0",
+    "icalendar==7.3.2",
 ]
 
 [project.optional-dependencies]
