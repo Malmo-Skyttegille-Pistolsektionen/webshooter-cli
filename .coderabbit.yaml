@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# Repository overrides. Everything else comes from the central config
+# (<owner>/coderabbit) via `inheritance: true`.
+# https://docs.coderabbit.ai/configuration/central-configuration
+inheritance: true
